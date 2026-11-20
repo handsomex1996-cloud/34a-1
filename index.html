@@ -1,0 +1,2549 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IHK § 34a GewO — Prüfungssimulator</title>
+  <!-- Tailwind CSS для чистого, адаптивного мобильного интерфейса -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Шрифт Inter для высокой читаемости -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .option-btn {
+      transition: all 0.15s ease;
+    }
+    .option-btn:active {
+      transform: scale(0.99);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between bg-slate-50 text-slate-900">
+
+  <!-- Основной контейнер (Mobile-First, центрирован, без горизонтального скролла) -->
+  <div id="app" class="w-full max-w-2xl mx-auto px-4 py-5 flex-grow flex flex-col">
+
+    <!-- ==================== ЭКРАН 1: СТАРТ И ВЫБОР ЯЗЫКА ==================== -->
+    <section id="screen-start" class="flex flex-col justify-center flex-grow space-y-6">
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-5">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+          <div>
+            <span class="inline-block text-xs font-bold uppercase tracking-wider text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg">
+              IHK Sachkundeprüfung • WhatsApp Ready
+            </span>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-2">
+              § 34a GewO Simulator
+            </h1>
+            <p class="text-sm text-slate-500 mt-1">
+              Schriftliche Prüfung • 9 Themengebiete • 100 Punkte
+            </p>
+            <p id="seen-pool-status" class="text-xs font-semibold text-blue-700 mt-1.5">
+              Fragenpool: 0 / 820+ gesehen • Zufällige Reihenfolge aktiv
+            </p>
+          </div>
+        </div>
+
+        <!-- Поле имени ученика (опционально, попадёт в отчёт для преподавателя) -->
+        <div>
+          <label for="student-name-input" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
+            Name / Имя ученика (für den Bericht / для отчёта)
+          </label>
+          <input
+            id="student-name-input"
+            type="text"
+            placeholder="z. B. Max Mustermann"
+            class="w-full px-4 py-3 rounded-xl border border-slate-300 text-base focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent bg-slate-50"
+          />
+        </div>
+
+        <!-- Стартовое время (по умолчанию текущее HH:MM, можно изменить вручную) -->
+        <div>
+          <label for="start-time-input" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
+            Startzeit / Время старта (120 Min. Fenster)
+          </label>
+          <input
+            id="start-time-input"
+            type="time"
+            class="w-full px-4 py-3 rounded-xl border border-slate-300 text-base font-mono focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent bg-slate-50"
+          />
+        </div>
+
+        <!-- Выбор режима прохождения -->
+        <div>
+          <span class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
+            Prüfungsmodus / Режим симуляции
+          </span>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <button
+              type="button"
+              id="mode-full-btn"
+              onclick="selectMode('full')"
+              class="mode-selector text-left p-3.5 rounded-xl border-2 border-blue-600 bg-blue-50/70 transition"
+            >
+              <div class="font-bold text-sm text-slate-900">Полный экзамен IHK</div>
+              <div class="text-xs text-slate-600 mt-0.5">82 вопроса • 120 мин • 100 баллов</div>
+            </button>
+            <button
+              type="button"
+              id="mode-quick-btn"
+              onclick="selectMode('quick')"
+              class="mode-selector text-left p-3.5 rounded-xl border-2 border-slate-200 bg-white hover:border-slate-300 transition"
+            >
+              <div class="font-bold text-sm text-slate-900">Быстрая тренировка</div>
+              <div class="text-xs text-slate-600 mt-0.5">18 вопросов (все 9 тем) • 26 мин</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Выбор языка: ровно 2 крупные кнопки -->
+        <div class="pt-1">
+          <span class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2.5">
+            Sprache für Erklärungen / Язык объяснений и интерфейса
+          </span>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button
+              type="button"
+              onclick="startExam('de')"
+              class="w-full py-4 px-5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-base shadow-sm flex items-center justify-center gap-2 transition active:scale-[0.99]"
+            >
+              <span>Auf Deutsch</span>
+              <span class="text-slate-400 text-sm">→</span>
+            </button>
+
+            <button
+              type="button"
+              id="btn-native-select"
+              onclick="showNativeLangInput()"
+              class="w-full py-4 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-base shadow-sm flex items-center justify-center gap-2 transition active:scale-[0.99]"
+            >
+              <span>Muttersprache (Родной язык)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Скрытое поле для ввода любого родного языка -->
+        <div id="native-lang-box" class="hidden pt-2 border-t border-slate-100 space-y-3">
+          <label for="native-lang-input" class="block text-sm font-semibold text-slate-800">
+            Введите ваш родной язык / Ihre Muttersprache:
+          </label>
+          <input
+            id="native-lang-input"
+            type="text"
+            placeholder="Например: Русский, Українська, Türkçe, العربية, Polski..."
+            class="w-full px-4 py-3 rounded-xl border border-blue-300 text-base focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white"
+          />
+          <button
+            type="button"
+            onclick="startWithNativeLang()"
+            class="w-full py-3.5 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-base shadow-sm transition active:scale-[0.99]"
+          >
+            Начать экзамен / Prüfung starten →
+          </button>
+          <p id="native-lang-error" class="hidden text-xs font-medium text-red-600">
+            Пожалуйста, укажите язык (например: Русский).
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== ЭКРАН 2: ПРОХОЖДЕНИЕ ЭКЗАМЕНА ==================== -->
+    <section id="screen-exam" class="hidden flex-col flex-grow space-y-4">
+      <!-- Верхняя панель: таймер, прогресс, кнопка досрочного завершения -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-3.5 space-y-2.5 sticky top-2 z-10">
+        <div class="flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <span id="timer-display" class="font-mono font-extrabold text-base sm:text-lg px-3 py-1 rounded-lg bg-slate-900 text-white">
+              120:00
+            </span>
+            <span id="question-counter" class="text-xs sm:text-sm font-bold text-slate-700">
+              Frage 1 / 82
+            </span>
+          </div>
+          <button
+            type="button"
+            onclick="confirmStopExam()"
+            class="px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-bold text-xs uppercase tracking-wide transition"
+          >
+            STOPP ERGEBNIS
+          </button>
+        </div>
+
+        <!-- Прогресс-бар -->
+        <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+          <div id="progress-bar" class="h-full bg-blue-600 transition-all duration-300" style="width: 1%;"></div>
+        </div>
+
+        <!-- Текущий блок и метаданные вопроса -->
+        <div class="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+          <span id="block-badge" class="text-xs font-semibold text-slate-600">
+            Block 1: BGB
+          </span>
+          <div class="flex items-center gap-1.5">
+            <span id="points-badge" class="text-xs font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
+              1 Punkt
+            </span>
+            <span id="answers-count-badge" class="text-xs font-extrabold px-2.5 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-300">
+              [1 richtige Antwort]
+            </span>
+          </div>
+        </div>
+
+        <!-- Строка остатка времени и расчётного времени окончания -->
+        <div id="time-status-line" class="text-xs font-semibold text-slate-600 bg-slate-50 border border-slate-200/80 rounded-lg px-3 py-1.5 flex items-center justify-between gap-2">
+          <span id="pace-remaining-text">⏱️ Restzeit: ~120 Min. von 120 Min.</span>
+          <span id="end-time-text" class="font-mono text-slate-500">Ende: --:--</span>
+        </div>
+      </div>
+
+      <!-- Карточка вопроса -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-4">
+        <h2 id="question-text" class="text-base sm:text-lg font-bold text-slate-900 leading-snug">
+          <!-- Текст вопроса подставляется динамически -->
+        </h2>
+
+        <!-- 5 крупных кнопок вариантов A-E -->
+        <div id="options-container" class="space-y-2.5">
+          <!-- Варианты A, B, C, D, E генерируются JS -->
+        </div>
+
+        <!-- Блок обратной связи (появляется СТРОГО после нажатия "Ответить") -->
+        <div id="feedback-box" class="hidden rounded-xl p-4 space-y-2.5 border">
+          <div id="feedback-header" class="font-extrabold text-base"></div>
+          <div id="feedback-explanation" class="text-sm leading-relaxed"></div>
+          <div id="feedback-anchor" class="text-xs sm:text-sm font-semibold p-2.5 rounded-lg bg-white/80 border border-black/10"></div>
+        </div>
+
+        <!-- Кнопка подтверждения / перехода к следующему вопросу -->
+        <div class="pt-1">
+          <button
+            type="button"
+            id="btn-submit-answer"
+            onclick="submitAnswer()"
+            disabled
+            class="w-full py-4 px-5 rounded-xl bg-blue-600 disabled:bg-slate-200 disabled:text-slate-400 hover:bg-blue-700 text-white font-bold text-base shadow-sm transition"
+          >
+            Antwort prüfen / Ответить
+          </button>
+
+          <button
+            type="button"
+            id="btn-next-question"
+            onclick="nextQuestion()"
+            class="hidden w-full py-4 px-5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-base shadow-sm transition"
+          >
+            Weiter / Следующий вопрос →
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== ЭКРАН 3: ИТОГИ, ГРАФИК, ТАБЛИЦА И ОТЧЁТ ==================== -->
+    <section id="screen-results" class="hidden flex-col space-y-5 pb-8">
+      <!-- Карточка общего результата -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 text-center space-y-3">
+        <div id="result-status-badge" class="inline-block px-4 py-1.5 rounded-full text-sm font-extrabold uppercase tracking-wider">
+          BESTANDEN
+        </div>
+        <div class="text-4xl sm:text-5xl font-extrabold text-slate-900">
+          <span id="result-score">0</span> <span class="text-xl sm:text-2xl text-slate-400 font-bold">/ <span id="result-max-score">100</span> Pkt.</span>
+        </div>
+        <div class="text-sm font-semibold text-slate-600">
+          Ergebnis: <span id="result-percent">0%</span> • Zeit: <span id="result-time-used">00:00</span> Min.
+        </div>
+      </div>
+
+      <!-- Визуальный график (гистограмма по 9 темам: ASCII + визуальная шкала) -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-3.5">
+        <h3 class="text-base font-extrabold text-slate-900">
+          Grafik nach Themengebieten / График по темам
+        </h3>
+        <div id="chart-container" class="space-y-3">
+          <!-- Полосы гистограммы и ASCII-шкала генерируются JS -->
+        </div>
+      </div>
+
+      <!-- Таблица результатов по темам -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-3 overflow-x-auto">
+        <h3 class="text-base font-extrabold text-slate-900">
+          Ergebnistabelle / Таблица результатов
+        </h3>
+        <table class="w-full text-left border-collapse text-xs sm:text-sm">
+          <thead>
+            <tr class="border-b border-slate-200 text-slate-500">
+              <th class="py-2 pr-2 font-bold">Thema (Block)</th>
+              <th class="py-2 px-2 font-bold text-center">Richtig</th>
+              <th class="py-2 px-2 font-bold text-center">Pkt.</th>
+              <th class="py-2 px-2 font-bold text-center">%</th>
+              <th class="py-2 pl-2 font-bold text-right">Niveau</th>
+            </tr>
+          </thead>
+          <tbody id="results-table-body" class="divide-y divide-slate-100">
+            <!-- Строки таблицы генерируются JS -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Автоматический анализ и рекомендации -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-3">
+        <h3 class="text-base font-extrabold text-slate-900">
+          Analyse & Empfehlungen / Автоанализ и рекомендации
+        </h3>
+        <div id="analysis-container" class="space-y-2.5 text-sm text-slate-700 leading-relaxed">
+          <!-- Автоанализ генерируется JS -->
+        </div>
+      </div>
+
+      <!-- Отчёт для преподавателя + копирование в 1 клик -->
+      <div class="bg-slate-900 text-white rounded-2xl shadow-sm p-5 space-y-3.5">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h3 class="text-base font-extrabold">BERICHT FÜR DIE LEHRKRAFT (WHATSAPP)</h3>
+            <p id="whatsapp-send-instruction" class="text-xs text-slate-300">
+              Скопируйте этот блок, впишите своё имя и отправьте в группу WhatsApp, чтобы преподаватель увидел ваши результаты.
+            </p>
+          </div>
+        </div>
+
+        <div>
+          <input
+            id="report-name-input"
+            type="text"
+            oninput="updateReportText()"
+            placeholder="Впишите имя и фамилию / Name eintragen"
+            class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        <pre id="teacher-report-box" class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 text-xs font-mono text-slate-200 whitespace-pre-wrap overflow-x-auto select-all"></pre>
+
+        <button
+          type="button"
+          onclick="copyTeacherReport()"
+          id="btn-copy-report"
+          class="w-full py-3.5 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm sm:text-base transition active:scale-[0.99]"
+        >
+          📋 Отчёт скопировать в 1 клик / Bericht kopieren
+        </button>
+      </div>
+
+      <!-- Кнопка перезапуска -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+        <button
+          type="button"
+          onclick="startNextRunFreshQuestions()"
+          class="w-full py-3.5 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm transition"
+        >
+          ⚡ Следующий прогон (новые вопросы)
+        </button>
+        <button
+          type="button"
+          onclick="resetToStart()"
+          class="w-full py-3.5 px-5 rounded-xl bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 font-bold text-sm transition"
+        >
+          ↻ На старт / Neue Prüfung
+        </button>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Модальное окно подтверждения досрочного завершения (вместо запрещённого confirm()) -->
+  <div id="modal-stop" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-xl border border-slate-200">
+      <h3 class="text-lg font-extrabold text-slate-900">Prüfung vorzeitig beenden?</h3>
+      <p class="text-sm text-slate-600">
+        Завершить экзамен сейчас и перейти к статистике, графику и отчёту? Неотвеченные вопросы будут засчитаны как 0 баллов.
+      </p>
+      <div class="grid grid-cols-2 gap-2.5 pt-1">
+        <button
+          type="button"
+          onclick="closeStopModal()"
+          class="py-2.5 px-4 rounded-xl border border-slate-300 font-semibold text-sm text-slate-700 hover:bg-slate-50"
+        >
+          Weiter / Назад
+        </button>
+        <button
+          type="button"
+          onclick="finishExam(true)"
+          class="py-2.5 px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm"
+        >
+          Ja, Ergebnis
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * =========================================================================
+     * ОФИЦИАЛЬНАЯ СТРУКТУРА 9 БЛОКОВ IHK SACHKUNDEPRÜFUNG § 34a GewO (82 ВОПРОСА)
+     * =========================================================================
+     */
+    const BLOCKS = [
+      { id: 1, short: "BGB", title: "Block 1: BGB (Bürgerliches Gesetzbuch)", count: 12, points: 1 },
+      { id: 2, short: "StGB & StPO", title: "Block 2: StGB & StPO", count: 12, points: 1 },
+      { id: 3, short: "Umgang mit Menschen", title: "Block 3: Umgang mit Menschen", count: 16, points: 1 },
+      { id: 4, short: "Gewerberecht", title: "Block 4: Gewerberecht (GewO / BewachV)", count: 10, points: 1 },
+      { id: 5, short: "Öffentl. Sicherheit", title: "Block 5: Recht der öffentl. Sicherheit & Ordnung", count: 8, points: 2 },
+      { id: 6, short: "Datenschutz", title: "Block 6: Datenschutz (DSGVO / BDSG)", count: 4, points: 1 },
+      { id: 7, short: "DGUV", title: "Block 7: Unfallverhütungsvorschriften (DGUV)", count: 8, points: 1 },
+      { id: 8, short: "Verteidigungswaffen", title: "Block 8: Umgang mit Verteidigungswaffen", count: 4, points: 1 },
+      { id: 9, short: "Sicherheitstechnik", title: "Block 9: Grundzüge der Sicherheitstechnik", count: 8, points: 2 }
+    ];
+
+    /**
+     * =========================================================================
+     * ПОЛНАЯ БАЗА ИЗ 82 ЭКЗАМЕНАЦИОННЫХ ВОПРОСОВ IHK (СТРОГО ПО 9 БЛОКАМ)
+     * Формат каждого вопроса:
+     * { block: 1..9, q: "Текст на DE", opts: ["A", "B", "C", "D", "E"], ans: [индексы 0..4], expDe: "...", anchorDe: "...", expRu: "...", anchorRu: "..." }
+     * =========================================================================
+     */
+    const QUESTION_BANK = [
+      // ==================== BLOCK 1: BGB (12 вопросов, по 1 баллу) ====================
+      {
+        block: 1,
+        q: "Ein Ladendetektiv nimmt einem auf frischer Tat betroffenen Dieb unmittelbar nach dem Verlassen des Kassenbereichs die gestohlene Jacke wieder ab. Welche zwei Aussagen treffen rechtlich zu?",
+        opts: [
+          "Es liegt Besitzkehr nach § 859 Abs. 2 BGB vor.",
+          "Die Abnahme ist nur mit richterlichem Beschluss erlaubt.",
+          "Ein vorläufiges Festhalten des Täters bei frischer Tat kommt nach § 127 Abs. 1 StPO in Betracht.",
+          "Der Dieb ist rechtmäßiger Eigentümer nach § 903 BGB geworden.",
+          "§ 859 BGB gilt ausschließlich für Grundstücke, nie für bewegliche Sachen."
+        ],
+        ans: [0, 2],
+        expDe: "Bei Wegnahme einer beweglichen Sache durch verbotene Eigenmacht darf der Besitzer/Berechtigte die Sache sofort wieder abnehmen (§ 859 Abs. 2 BGB) und den Täter bei frischer Tat nach § 127 Abs. 1 StPO vorläufig festnehmen.",
+        anchorDe: "Alltagsanker: Wie wenn jemand dein Handy vom Cafétisch schnappt und du es an der Tür sofort zurücknimmst, bevor er wegläuft.",
+        expRu: "При незаконном изъятии движимой вещи владелец/уполномоченное лицо может сразу вернуть её по § 859 Abs. 2 BGB, а застигнутого на месте — задержать по § 127 Abs. 1 StPO.",
+        anchorRu: "Бытовой якорь: как если кто-то схватил твой телефон со столика в кафе, а ты на выходе сразу забрал его обратно, пока он не убежал."
+      },
+      {
+        block: 1,
+        q: "Bei 36 Grad Außentemperatur schlägt ein Sicherheitsmitarbeiter die Seitenscheibe eines fremden Pkw ein, um ein im Inneren kollabierendes Kleinkind zu retten. Welche zwei Aussagen treffen nach BGB zu?",
+        opts: [
+          "Es liegt ein Aggressivnotstand nach § 904 Satz 1 BGB vor.",
+          "Es handelt sich um Defensivnotstand nach § 228 BGB, da die Gefahr vom Auto selbst ausgeht.",
+          "Der Eigentümer des Pkw kann trotz Rechtmäßigkeit der Rettung nach § 904 Satz 2 BGB Schadensersatz verlangen.",
+          "Jede Sachbeschädigung zur Rettung von Menschen ist nach BGB völlig schadensersatzfrei.",
+          "Der Sicherheitsmitarbeiter begeht eine rechtswidrige unerlaubte Handlung nach § 823 BGB."
+        ],
+        ans: [0, 2],
+        expDe: "Einwirkung auf eine unbeteiligte fremde Sache (Scheibe) zur Abwehr einer viel größeren Gefahr = Aggressivnotstand (§ 904 Satz 1 BGB). Nach Satz 2 bleibt jedoch der Schadensersatzanspruch des Eigentümers bestehen.",
+        anchorDe: "Alltagsanker: Du leihst dir im Notfall Nachbars Leiter, um eine Katze vom Baum zu holen — die Leiter gehört ihm, kaputte Sprossen müssen trotzdem ersetzt werden.",
+        expRu: "Воздействие на чужую вещь (стекло) ради спасения жизни — агрессивная крайняя необходимость (§ 904 предл. 1 BGB). Но по предл. 2 собственник всё равно может требовать возмещения ущерба.",
+        anchorRu: "Бытовой якорь: в экстренной ситуации ты взял у соседа лестницу снять кошку с дерева — спасти можно, но сломанную перекладину по закону придётся возместить."
+      },
+      {
+        block: 1,
+        q: "Ein aggressiver Hund eines Besuchers springt auf dem Werksgelände einen Sicherheitsmitarbeiter an. Der Mitarbeiter wehrt den Hund ab, wobei das Tier verletzt wird. Welche BGB-Vorschrift greift primär bei Gefahr von der Sache/dem Tier selbst?",
+        opts: [
+          "Aggressivnotstand (§ 904 BGB)",
+          "Defensivnotstand (§ 228 BGB)",
+          "Besitzkehr (§ 859 Abs. 2 BGB)",
+          "Eigentumsvermutung (§ 1006 BGB)",
+          "Verjährung (§ 195 BGB)"
+        ],
+        ans: [1],
+        expDe: "Tiere gelten rechtlich wie Sachen (§ 90a BGB). Geht die Gefahr direkt vom Tier/der Sache selbst aus, greift der Defensivnotstand nach § 228 BGB.",
+        anchorDe: "Alltagsanker: Ein bissiger Nachbarhund greift dich an deinem Gartenzaun an — du wehrst das Tier ab, das die Gefahr selbst verursacht.",
+        expRu: "Животные приравнены к вещам (§ 90a BGB). Когда опасность исходит непосредственно от животного/вещи, применяется оборонительная крайняя необходимость — § 228 BGB.",
+        anchorRu: "Бытовой якорь: злой пёс у калитки сам бросается на тебя — ты отбиваешься от источника угрозы напрямую."
+      },
+      {
+        block: 1,
+        q: "Welche zwei Voraussetzungen gehören typischerweise zur allgemeinen Selbsthilfe nach § 229 BGB?",
+        opts: [
+          "Es besteht ein zivilrechtlicher Anspruch.",
+          "Obrigkeitliche Hilfe (Polizei/Gericht) ist nicht rechtzeitig zu erlangen.",
+          "Es liegt zwingend ein Mordversuch vor.",
+          "Der Sicherheitsmitarbeiter darf den Schuldner für 72 Stunden einsperren.",
+          "Eine mündliche Vollmacht des Nachbarn genügt für jede Wohnung."
+        ],
+        ans: [0, 1],
+        expDe: "§ 229 BGB setzt einen durchsetzbaren Anspruch voraus, wenn behördliche Hilfe nicht rechtzeitig erreichbar ist und sonst die Durchsetzung des Anspruchs vereitelt oder erschwert würde.",
+        anchorDe: "Alltagsanker: Jemand fährt dir auf dem Parkplatz ins Auto und will sofort wegfahren, bevor die Polizei da ist und du das Kennzeichen notiert hast.",
+        expRu: "§ 229 BGB требует наличия притязания, когда помощь властей не подоспеет вовремя и иначе исполнение требования окажется под угрозой срыва.",
+        anchorRu: "Бытовой якорь: на парковке во дворе кто-то задел твою машину и хочет уехать до приезда полиции — действовать нужно прямо сейчас."
+      },
+      {
+        block: 1,
+        q: "Worin besteht der rechtliche Unterschied zwischen Eigentum und Besitz im BGB?",
+        opts: [
+          "Besitz ist die rechtliche Herrschaft, Eigentum nur die tatsächliche Sachherrschaft.",
+          "Eigentum (§ 903 BGB) ist die umfassende rechtliche Herrschaft über eine Sache; Besitz (§ 854 BGB) ist die tatsächliche Sachherrschaft.",
+          "Mieter einer Wohnung sind Eigentümer, aber keine Besitzer.",
+          "Ein Sicherheitsmitarbeiter auf Streife ist Eigentümer seines Dienstfahrzeugs.",
+          "Besitz und Eigentum sind im BGB identische Begriffe."
+        ],
+        ans: [1],
+        expDe: "Eigentum (§ 903 BGB) = rechtliche Herrschaft („wem gehört es?“). Besitz (§ 854 BGB) = tatsächliche Sachherrschaft („wer hat es gerade in der Hand/Nutzung?“).",
+        anchorDe: "Alltagsanker: Du leihst dir vom Freund ein Fahrrad für den Nachmittag — das Fahrrad gehört ihm (Eigentum), aber du fährst damit und hast es in der Hand (Besitz).",
+        expRu: "Eigentum (§ 903 BGB) — юридическое право собственности; Besitz (§ 854 BGB) — фактическое обладание вещью.",
+        anchorRu: "Бытовой якорь: ты взял у друга велосипед покататься на пару часов — собственник он (Eigentum), а в руках и под контролем он сейчас у тебя (Besitz)."
+      },
+      {
+        block: 1,
+        q: "Welche Stellung hat ein angestellter Sicherheitsmitarbeiter an den ihm dienstlich überlassenen Schlüsseln und Funkgeräten des Auftraggebers?",
+        opts: [
+          "Er ist Alleineigentümer.",
+          "Er ist mittelbarer Besitzer.",
+          "Er ist Besitzdiener nach § 855 BGB, da er die tatsächliche Gewalt für einen anderen in dessen Betrieb ausübt und dessen Weisungen unterliegt.",
+          "Er ist Eigenbesitzer nach § 872 BGB.",
+          "Er hat überhaupt keinen Kontakt zu den Sachen."
+        ],
+        ans: [2],
+        expDe: "Wer die tatsächliche Gewalt über eine Sache für einen anderen im Betrieb ausübt und dessen Weisungen folgen muss, ist Besitzdiener (§ 855 BGB); Besitzer bleibt der Arbeitgeber/Auftraggeber.",
+        anchorDe: "Alltagsanker: Ein Kellner trägt das Tablett mit den Getränken zum Tisch — das Tablett gehört dem Wirt, der Kellner bedient es im Auftrag.",
+        expRu: "Работник, владеющий вещью для другого лица на предприятии и обязанный выполнять его указания, является слугой во владении — Besitzdiener (§ 855 BGB).",
+        anchorRu: "Бытовой якорь: официант несёт поднос с кофе гостям — поднос принадлежит заведению, официант действует по правилам работы."
+      },
+      {
+        block: 1,
+        q: "Ab welchem Lebensjahr tritt nach BGB die volle Geschäftsfähigkeit ein, und wann beginnt die Rechtsfähigkeit eines Menschen?",
+        opts: [
+          "Rechtsfähigkeit mit der Vollendung der Geburt (§ 1 BGB); volle Geschäftsfähigkeit mit Vollendung des 18. Lebensjahres (§§ 2, 106 BGB).",
+          "Rechtsfähigkeit erst mit 14 Jahren; Geschäftsfähigkeit mit 21 Jahren.",
+          "Beides beginnt erst mit der Einschulung.",
+          "Rechtsfähigkeit mit 18 Jahren; Geschäftsfähigkeit ab Geburt.",
+          "Volle Geschäftsfähigkeit tritt bereits mit 16 Jahren ein."
+        ],
+        ans: [0],
+        expDe: "Die Rechtsfähigkeit (Träger von Rechten und Pflichten zu sein) beginnt mit Vollendung der Geburt (§ 1 BGB). Die volle Geschäftsfähigkeit beginnt mit Eintritt der Volljährigkeit (18 Jahre, § 2 BGB).",
+        anchorDe: "Alltagsanker: Schon ein Neugeborenes kann erben (Rechtsfähigkeit), aber erst mit 18 darf man allein einen Handyvertrag unterschreiben (Geschäftsfähigkeit).",
+        expRu: "Правоспособность возникает с момента рождения (§ 1 BGB), а полная дееспособность — с наступлением совершеннолетия в 18 лет (§ 2 BGB).",
+        anchorRu: "Бытовой якорь: даже младенец может иметь права (например, на наследство), но сам подписать договор связи можно только с 18 лет."
+      },
+      {
+        block: 1,
+        q: "Ein Besucher beschädigt im Eingangsbereich eines Bürogebäudes fahrlässig eine Glastür. Aus welcher BGB-Norm ergibt sich primär die gesetzliche Schadensersatzpflicht aus unerlaubter Handlung?",
+        opts: [
+          "§ 823 Abs. 1 BGB",
+          "§ 903 BGB",
+          "§ 855 BGB",
+          "§ 1 BGB",
+          "§ 227 BGB"
+        ],
+        ans: [0],
+        expDe: "Wer vorsätzlich oder fahrlässig das Eigentum eines anderen widerrechtlich verletzt, ist nach § 823 Abs. 1 BGB zum Ersatz des daraus entstehenden Schadens verpflichtet.",
+        anchorDe: "Alltagsanker: Jemand stößt aus Unachtsamkeit mit dem Koffer gegen die Glastür und zerbricht sie — wer den Schaden verursacht, muss ihn ersetzen.",
+        expRu: "Кто умышленно или по неосторожности противоправно повреждает чужую собственность, обязан возместить ущерб по § 823 Abs. 1 BGB.",
+        anchorRu: "Бытовой якорь: кто-то неаккуратно задел чемоданом стеклянную дверь и разбил её — виновник компенсирует ущерб."
+      },
+      {
+        block: 1,
+        q: "Welche zwei Aussagen zum Hausrecht im BGB sind richtig?",
+        opts: [
+          "Das Hausrecht basiert auf Eigentum (§ 903 BGB) und Besitz (§§ 858 ff. BGB).",
+          "Das Hausrecht kann durch Vertrag nicht auf einen Sicherheitsdienst übertragen werden.",
+          "Der Hausrechtsinhaber darf grundsätzlich bestimmen, wer das befriedete Besitztum betreten und darin verweilen darf.",
+          "Das Hausrecht erlaubt es, Ladendiebe 48 Stunden einzusperren.",
+          "Im öffentlichen Straßenraum vor dem Gebäude gilt automatisch das private Hausrecht."
+        ],
+        ans: [0, 2],
+        expDe: "Das Hausrecht ergibt sich aus Eigentum/Besitz, ist übertragbar (z. B. Dienstanweisung) und erlaubt die Entscheidung über Zutritt und Verweilen im geschützten Bereich.",
+        anchorDe: "Alltagsanker: In deiner eigenen Wohnung bestimmst du, wer reinkommt und wann jemand gehen muss — auf dem Gehweg vor der Tür gilt das nicht.",
+        expRu: "Домовое право основано на собственности (§ 903 BGB) и владении (§§ 858 ff. BGB) и даёт право определять, кто может входить и находиться на объекте.",
+        anchorRu: "Бытовой якорь: у себя дома ты решаешь, кому открыть дверь и кого попросить выйти, но на тротуаре за дверью этого правила нет."
+      },
+      {
+        block: 1,
+        q: "Ein Sicherheitsmitarbeiter zerbricht bei der Festnahme eines Diebes aus grober Unachtsamkeit ohne Notwendigkeit eine teure Vitrine des Auftraggebers. Welche Rechtsfolge tritt ein?",
+        opts: [
+          "Er haftet nach § 823 Abs. 1 BGB / vertraglichen Grundsätzen nicht, weil er im Dienst war.",
+          "Es kann eine Schadensersatzpflicht wegen fahrlässiger Eigentumsverletzung entstehen.",
+          "Der Dieb muss automatisch alle Fehler des Sicherheitsmitarbeiters bezahlen.",
+          "Das BGB gilt nicht für Sicherheitsmitarbeiter.",
+          "Die Vitrine geht in das Eigentum des Mitarbeiters über."
+        ],
+        ans: [1],
+        expDe: "Auch im Dienst gilt das Verbot widerrechtlicher Eigentumsverletzung (§ 823 Abs. 1 BGB); bei grober Fahrlässigkeit greift die Haftung.",
+        anchorDe: "Alltagsanker: Beim schnellen Zupacken schmeißt jemand aus reiner Unachtsamkeit eine teure Vase um — „ich war in Eile“ zählt nicht als Freifahrtschein.",
+        expRu: "Даже при исполнении обязанностей действует запрет неправомерного повреждения чужой собственности (§ 823 Abs. 1 BGB); при грубой неосторожности наступает ответственность.",
+        anchorRu: "Бытовой якорь: в суете человек по небрежности роняет дорогую вазу — фраза «я спешил» не освобождает от разбора ущерба."
+      },
+      {
+        block: 1,
+        q: "Was besagt der Grundsatz von Treu und Glauben (§ 242 BGB) im Rahmen von Bewachungsverträgen und der Ausübung von Rechten?",
+        opts: [
+          "Rechte dürfen nicht schikanös oder missbräuchlich ausgeübt werden.",
+          "Jeder Vertrag muss notariell beurkundet werden.",
+          "Sicherheitsmitarbeiter dürfen ohne Grund Taschen durchsuchen.",
+          "Mündliche Absprachen sind im BGB immer ungültig.",
+          "Notwehr ist nur nach schriftlicher Ankündigung erlaubt."
+        ],
+        ans: [0],
+        expDe: "§ 242 BGB verpflichtet zur redlichen Ausübung von Rechten und verbietet Rechtsmissbrauch sowie Schikane (§ 226 BGB).",
+        anchorDe: "Alltagsanker: Ein Nachbar stellt seinen Müll absichtlich nur deshalb vor deine Tür, um dich zu ärgern — das ist missbräuchlich und unfair.",
+        expRu: "§ 242 BGB обязывает добросовестно осуществлять права и запрещает злоупотребление правом.",
+        anchorRu: "Бытовой якорь: сосед выставляет пакеты с мусором прямо у твоей двери назло — это недобросовестное злоупотребление."
+      },
+
+      // ==================== BLOCK 2: StGB & StPO (12 вопросов, по 1 баллу) ====================
+      {
+        block: 2,
+        q: "Welche zwei Voraussetzungen müssen für eine gerechtfertigte Notwehr nach § 32 StGB zwingend vorliegen?",
+        opts: [
+          "Ein gegenwärtiger, rechtswidriger Angriff eines Menschen.",
+          "Eine vorherige Genehmigung durch die Polizei.",
+          "Die Erforderlichkeit und Gebotenheit der Verteidigungshandlung.",
+          "Eine strenge Gleichwertigkeit der betroffenen Rechtsgüter wie beim Notstand.",
+          "Dass der Angreifer älter als 18 Jahre ist."
+        ],
+        ans: [0, 2],
+        expDe: "Notwehr (§ 32 StGB) erfordert einen gegenwärtigen, rechtswidrigen menschlichen Angriff sowie eine erforderliche und gebotene Verteidigung. Eine Güterabwägung findet grundsätzlich nicht statt.",
+        anchorDe: "Alltagsanker: Jemand greift dich auf dem Heimweg an — du wehrst dich genau so stark, wie nötig ist, um den Angriff sofort zu stoppen.",
+        expRu: "Необходимая оборона (§ 32 StGB) требует наличного противоправного нападения человека и необходимой, допустимой защиты. Взвешивание благ, как при крайней необходимости, не проводится.",
+        anchorRu: "Бытовой якорь: по дороге домой на тебя нападают — ты защищаешься ровно настолько, чтобы остановить удар прямо сейчас."
+      },
+      {
+        block: 2,
+        q: "Ein Angreifer liegt nach einem Abwehrschlag bereits bewusstlos am Boden. Der Sicherheitsmitarbeiter tritt aus Wut und Rache noch zweimal zu. Wie ist das zu bewerten?",
+        opts: [
+          "Rechtmäßige Notwehr nach § 32 StGB.",
+          "Straffreier Notwehrexzess nach § 33 StGB.",
+          "Strafbare Körperverletzung (§§ 223 / 224 StGB), da der Angriff beendet ist und § 33 StGB nur bei Verwirrung, Furcht oder Schrecken greift.",
+          "Erlaubte Selbsthilfe nach § 229 BGB.",
+          "Vorläufige Festnahme nach § 127 Abs. 1 StPO."
+        ],
+        ans: [2],
+        expDe: "Ist der Angriff beendet, liegt keine Notwehrlage mehr vor. § 33 StGB entschuldigt nur Überschreitungen aus asthenischen Affekten (Verwirrung, Furcht, Schrecken) — niemals aus Wut oder Rache!",
+        anchorDe: "Alltagsanker: Der Streit ist vorbei und der andere liegt schon am Boden — wer aus Wut nachtritt, macht sich selbst strafbar.",
+        expRu: "Когда нападение окончено, обороны больше нет. § 33 StGB освобождает от наказания только при замешательстве, страхе или испуге — но никогда при злости или мести!",
+        anchorRu: "Бытовой якорь: драка уже закончилась и человек лежит — ударить из злости вдогонку означает самому нарушить закон."
+      },
+      {
+        block: 2,
+        q: "Ein Täter entreißt einer Kundin blitzschnell die Handtasche ohne Gewalt gegen ihren Körper. Als ein Detektiv ihn festhält, schlägt der Täter mit der Faust zu, um die Tasche zu behalten. Welches Delikt liegt vor?",
+        opts: [
+          "Unterschlagung (§ 246 StGB)",
+          "Räuberischer Diebstahl (§ 252 StGB)",
+          "Hausfriedensbruch (§ 123 StGB)",
+          "Sachbeschädigung (§ 303 StGB)",
+          "Amtsanmaßung (§ 132 StGB)"
+        ],
+        ans: [1],
+        expDe: "Wer bei einem Diebstahl auf frischer Tat betroffen wird und Gewalt anwendet, um sich im Besitz des gestohlenen Gutes zu erhalten, begeht Räuberischen Diebstahl (§ 252 StGB).",
+        anchorDe: "Alltagsanker: Ein Taschendieb zieht unbemerkt ein Portemonnaie raus und schlägt beim Weglaufen zu, als man ihn packt, um das Portemonnaie zu behalten.",
+        expRu: "Тот, кто застигнут на месте кражи и применяет насилие, чтобы удержать похищенное, совершает разбойную кражу — Räuberischer Diebstahl (§ 252 StGB).",
+        anchorRu: "Бытовой якорь: вор незаметно вытащил кошелёк, а когда его схватили на выходе, пустил в ход кулаки, чтобы не отдать добычу."
+      },
+      {
+        block: 2,
+        q: "Welche zwei Voraussetzungen sind für die vorläufige Festnahme nach § 127 Abs. 1 Satz 1 StPO typisch?",
+        opts: [
+          "Die Person wird auf frischer Tat betroffen oder verfolgt.",
+          "Es besteht Fluchtverdacht oder die Identität kann nicht sofort festgestellt werden.",
+          "Es liegt lediglich ein harmloses Falschparken vor.",
+          "Der Festnehmende darf die Person ohne Grund tagelang in den Keller sperren.",
+          "Es muss zwingend ein richterlicher Haftbefehl vorgezeigt werden."
+        ],
+        ans: [0, 1],
+        expDe: "§ 127 Abs. 1 StPO setzt eine Straftat, frische Tat/Verfolgung sowie Fluchtverdacht oder ungeklärte Identität voraus.",
+        anchorDe: "Alltagsanker: Ein Dieb wird direkt beim Klauen erwischt und will weglaufen oder nennt keinen Namen — man hält ihn fest, bis die Polizei übernimmt.",
+        expRu: "§ 127 Abs. 1 StPO требует наличия преступления, задержания с поличным/по горячим следам и угрозы побега либо неустановленной личности.",
+        anchorRu: "Бытовой якорь: вора поймали с поличным, он пытается убежать или не называет себя — его удерживают до приезда полиции."
+      },
+      {
+        block: 2,
+        q: "Welche zwei Handlungen erfüllen den Tatbestand des Hausfriedensbruchs nach § 123 Abs. 1 StGB?",
+        opts: [
+          "Widerrechtliches Eindringen in eine Wohnung, einen Geschäftsraum oder ein befriedetes Besitztum.",
+          "Das bloße Fotografieren eines Gebäudes von der öffentlichen Straße aus.",
+          "Das unbefugte Verweilen darin, wenn man sich auf Aufforderung des Berechtigten nicht entfernt.",
+          "Das versehentliche Betreten eines offenen Supermarkts während der Öffnungszeiten.",
+          "Das laute Rufen vor dem Eingangstor auf öffentlichem Gehweg."
+        ],
+        ans: [0, 2],
+        expDe: "§ 123 Abs. 1 StGB kennt zwei Alternativen: widerrechtliches Eindringen (gegen den Willen) und unbefugtes Verweilen trotz Aufforderung zum Verlassen.",
+        anchorDe: "Alltagsanker: Jemand klettert über deinen Gartenzaun ODER bleibt nach Feierabend im Laden, obwohl man ihn freundlich bittet zu gehen.",
+        expRu: "§ 123 Abs. 1 StGB включает два действия: незаконное проникновение и незаконное пребывание (отказ уйти после требования уполномоченного лица).",
+        anchorRu: "Бытовой якорь: кто-то перелез через забор участка ИЛИ не уходит после закрытия магазина, когда его попросили выйти."
+      },
+      {
+        block: 2,
+        q: "Ein Besucher beleidigt einen Sicherheitsmitarbeiter lautstark vor anderen Gästen („Sie Vollidiot!“). Welches Delikt liegt vor und wie wird es verfolgt?",
+        opts: [
+          "Üble Nachrede (§ 186 StGB) — Offizialdelikt.",
+          "Beleidigung (§ 185 StGB) — Antragsdelikt nach § 194 StGB.",
+          "Nötigung (§ 240 StGB) — Verbrechen.",
+          "Körperverletzung (§ 223 StGB).",
+          "Falsche Verdächtigung (§ 164 StGB)."
+        ],
+        ans: [1],
+        expDe: "Die Kundgabe der Missachtung gegenüber dem Betroffenen ist Beleidigung (§ 185 StGB). Sie ist nach § 194 StGB ein Antragsdelikt (Strafantrag erforderlich).",
+        anchorDe: "Alltagsanker: Jemand beschimpft dich direkt ins Gesicht — du entscheidest selbst, ob du Strafantrag stellst oder es auf sich beruhen lässt.",
+        expRu: "Прямое выражение неуважения в адрес лица — оскорбление (§ 185 StGB). По § 194 StGB это преступление, преследуемое по заявлению потерпевшего (Antragsdelikt).",
+        anchorRu: "Бытовой якорь: тебя оскорбили в лицо — именно ты решаешь, подавать ли заявление или не тратить на это нервы."
+      },
+      {
+        block: 2,
+        q: "Wodurch unterscheidet sich ein Verbrechen von einem Vergehen nach § 12 StGB?",
+        opts: [
+          "Verbrechen sind rechtswidrige Taten, die im Mindestmaß mit Freiheitsstrafe von einem Jahr oder darüber bedroht sind.",
+          "Verbrechen werden nur mit Geldbuße geahndet.",
+          "Vergehen sind immer schwerer als Verbrechen.",
+          "Diebstahl (§ 242 StGB) ist ein Verbrechen, Raub (§ 249 StGB) ein Vergehen.",
+          "Der Versuch eines Vergehens ist immer strafbar, der Versuch eines Verbrechens nie."
+        ],
+        ans: [0],
+        expDe: "Nach § 12 Abs. 1 StGB sind Verbrechen Taten mit einer Mindestfreiheitsstrafe von 1 Jahr oder mehr. Vergehen haben eine geringere Mindeststrafe oder Geldstrafe.",
+        anchorDe: "Alltagsanker: „Verbrechen“ klingt im Alltag nach jedem schlimmen Ding, aber im Gesetz gilt: Mindeststrafe ab 1 Jahr Gefängnis = Verbrechen.",
+        expRu: "По § 12 Abs. 1 StGB тяжкое преступление (Verbrechen) наказывается лишением свободы от 1 года и выше. Проступок (Vergehen) — менее 1 года или штраф.",
+        anchorRu: "Бытовой якорь: в быту «преступлением» называют любой серьёзный проступок, но в законе Verbrechen — это когда минимум от 1 года тюрьмы."
+      },
+      {
+        block: 2,
+        q: "Ein Sicherheitsmitarbeiter trägt ohne Berechtigung ein täuschend echt aussehendes Polizeiabzeichen an der Uniform und führt im Stadtpark Personenkontrollen durch. Welches Delikt begeht er?",
+        opts: [
+          "Urkundenfälschung (§ 267 StGB)",
+          "Amtsanmaßung (§ 132 StGB)",
+          "Hausfriedensbruch (§ 123 StGB)",
+          "Unterschlagung (§ 246 StGB)",
+          "Keine Straftat, da er im Sicherheitsgewerbe arbeitet."
+        ],
+        ans: [1],
+        expDe: "Wer sich unbefugt mit der Ausübung eines öffentlichen Amtes befasst oder eine Handlung vornimmt, welche nur kraft eines öffentlichen Amtes vorgenommen werden darf, begeht Amtsanmaßung (§ 132 StGB).",
+        anchorDe: "Alltagsanker: Jemand setzt sich eine Polizeimütze auf und verlangt wie ein Beamter Ausweise auf der Straße — das ist Amtsanmaßung.",
+        expRu: "Тот, кто незаконно присваивает себе осуществление публичной должности или совершает действия, доступные только госорганам, совершает § 132 StGB (Amtsanmaßung).",
+        anchorRu: "Бытовой якорь: кто-то надел знак полиции и на улице требует документы как сотрудник органов — это незаконное присвоение полномочий."
+      },
+      {
+        block: 2,
+        q: "Welche zwei Tatbestandsmerkmale gehören zum Diebstahl nach § 242 StGB?",
+        opts: [
+          "Wegnahme einer fremden beweglichen Sache.",
+          "Absicht rechtswidriger Zueignung.",
+          "Anwendung von Gewalt gegen eine Person.",
+          "Beschädigung der Sache bis zur Unbrauchbarkeit.",
+          "Eindringen in ein befriedetes Besitztum als zwingende Voraussetzung."
+        ],
+        ans: [0, 1],
+        expDe: "§ 242 StGB verlangt: fremde bewegliche Sache, Wegnahme (Bruch fremden und Begründung neuen Gewahrsams) sowie die Absicht rechtswidriger Zueignung.",
+        anchorDe: "Alltagsanker: Du nimmst ein fremdes Fahrrad mit (Wegnahme), um es dauerhaft für dich zu behalten (Zueignungsabsicht), ohne Gewalt anzuwenden.",
+        expRu: "§ 242 StGB требует: чужая движимая вещь, изъятие (Wegnahme) и цель противоправного присвоения (Zueignungsabsicht).",
+        anchorRu: "Бытовой якорь: ты взял чужой велосипед и решил оставить себе навсегда без применения силы — вот они, два главных признака кражи."
+      },
+      {
+        block: 2,
+        q: "Ein Betrunkener schlägt im Vorbeigehen mutwillig den Außenspiegel eines auf dem Firmenparkplatz abgestellten Fahrzeugs ab. Welches Delikt liegt vor?",
+        opts: [
+          "Diebstahl (§ 242 StGB)",
+          "Sachbeschädigung (§ 303 StGB)",
+          "Unterschlagung (§ 246 StGB)",
+          "Raub (§ 249 StGB)",
+          "Freiheitsberaubung (§ 239 StGB)"
+        ],
+        ans: [1],
+        expDe: "Wer rechtswidrig eine fremde Sache beschädigt oder zerstört, macht sich wegen Sachbeschädigung nach § 303 StGB strafbar (ohne Zueignungsabsicht kein Diebstahl).",
+        anchorDe: "Alltagsanker: Jemand tritt im Ärger einen Seitenspiegel ab und lässt ihn auf dem Boden liegen — nichts mitgenommen, aber kaputt gemacht (§ 303 StGB).",
+        expRu: "Умышленное повреждение или уничтожение чужой вещи без цели присвоения — это порча имущества по § 303 StGB (Sachbeschädigung).",
+        anchorRu: "Бытовой якорь: со злости пнули боковое зеркало машины и оставили на асфальте — не забрали, но сломали (§ 303 StGB)."
+      },
+      {
+        block: 2,
+        q: "Ein Sicherheitsmitarbeiter schließt einen renitenten Besucher ohne Rechtfertigungsgrund über zwei Stunden in einem leeren Lagerraum ein. Welches Delikt begeht der Mitarbeiter?",
+        opts: [
+          "Nötigung (§ 240 StGB)",
+          "Freiheitsberaubung (§ 239 StGB)",
+          "Unterschlagung (§ 246 StGB)",
+          "Erpressung (§ 253 StGB)",
+          "Erlaubte Selbsthilfe (§ 229 BGB)"
+        ],
+        ans: [1],
+        expDe: "Wer einen Menschen einsperrt oder auf andere Weise des Gebrauchs der persönlichen Freiheit beraubt, begeht Freiheitsberaubung (§ 239 StGB).",
+        anchorDe: "Alltagsanker: Du schließt jemanden in einem Raum ein und nimmst den Schlüssel mit, obwohl keine Festnahme- oder Notwehrlage vorliegt.",
+        expRu: "Незаконное запирание человека в помещении образует лишение свободы по § 239 StGB (Freiheitsberaubung).",
+        anchorRu: "Бытовой якорь: закрыть человека на ключ в комнате и уйти, когда нет законного основания для задержания."
+      },
+      {
+        block: 2,
+        q: "Was bedeutet „Unterlassene Hilfeleistung“ nach § 323c Abs. 1 StGB?",
+        opts: [
+          "Man hilft bei einem Unglücksfall oder gemeiner Gefahr nicht, obwohl dies erforderlich und den Umständen nach zuzumuten ist.",
+          "Man weigert sich, einem Kunden bei der Suche nach einem Produkt im Regal zu helfen.",
+          "Man ruft bei einem Brand sofort die Feuerwehr statt selbst ins Feuer zu laufen.",
+          "Man verweigert als Zeuge die Aussage vor Gericht.",
+          "Man meldet eine Ordnungswidrigkeit nicht beim Ordnungsamt."
+        ],
+        ans: [0],
+        expDe: "Nach § 323c Abs. 1 StGB ist jeder verpflichtet, bei Unglücksfällen oder gemeiner Gefahr Hilfe zu leisten, soweit dies erforderlich und ohne erhebliche eigene Gefahr zumutbar ist.",
+        anchorDe: "Alltagsanker: Jemand stürzt auf der Straße und braucht Hilfe — Notruf wählen oder helfen, solange du dich selbst nicht in Lebensgefahr bringst.",
+        expRu: "По § 323c Abs. 1 StGB каждый обязан оказать помощь при несчастном случае, если это необходимо и возможно без серьёзной опасности для себя.",
+        anchorRu: "Бытовой якорь: человек упал на улице и нуждается в помощи — нужно помочь/вызвать скорую, не подвергая смертельному риску себя."
+      },
+
+      // ==================== BLOCK 3: UMGANG MIT MENSCHEN (16 вопросов, по 1 баллу) ====================
+      {
+        block: 3,
+        q: "Ein Besucher schreit bei der Einlasskontrolle: „Sie sind doch nur ein wichtigtuerischer Versager!“ Welche Seite einer Nachricht nach Friedemann Schulz von Thun steht hier im Vordergrund?",
+        opts: [
+          "Der reine Sachinhalt",
+          "Der Beziehungshinweis (Abwertung des Gegenübers)",
+          "Eine sachliche Terminvereinbarung",
+          "Das aktive Zuhören",
+          "Die Selbstverwirklichung nach Maslow"
+        ],
+        ans: [1],
+        expDe: "Nach dem 4-Seiten-Modell von Schulz von Thun enthält jede Nachricht Sachinhalt, Selbstkundgabe, Beziehungshinweis und Appell. Beschimpfungen zielen massiv auf die Beziehungsebene.",
+        anchorDe: "Alltagsanker: Wenn jemand sagt „Du kannst gar nichts“, geht es nicht um Fakten, sondern um Herabsetzung auf der Beziehungsebene.",
+        expRu: "По модели 4 сторон сообщения Шульца фон Туна оскорбление — это атака на уровне отношений (Beziehungsebene).",
+        anchorRu: "Бытовой якорь: когда кто-то говорит «ты ничего не умеешь», спор идёт не о фактах, а об унижении на уровне отношений."
+      },
+      {
+        block: 3,
+        q: "Wie reagiert ein Sicherheitsmitarbeiter deeskalierend auf eine verbale Provokation eines verärgerten Kunden?",
+        opts: [
+          "Er antwortet im gleichen Tonfall, um Autorität zu zeigen.",
+          "Er bleibt ruhig, zeigt Verständnis für die Emotion (aktives Zuhören) und führt das Gespräch zurück auf die Sachebene.",
+          "Er verschränkt die Arme vor der Brust und starrt den Kunden schweigend an.",
+          "Er droht sofort mit körperlicher Gewalt.",
+          "Er dreht dem Kunden mitten im Satz den Rücken zu."
+        ],
+        ans: [1],
+        expDe: "Deeskalation gelingt durch ruhige Stimme, aktives Zuhören, Empathie („Ich verstehe Ihren Ärger“) und sachliche Lösungsangebote auf der Sachebene.",
+        anchorDe: "Alltagsanker: Wenn jemand an der Kasse laut wird, gießt Schreien Öl ins Feuer — ruhiges Zuhören und eine klare Lösung senken den Druck.",
+        expRu: "Деэскалация достигается спокойным тоном, активным слушанием, проявлением понимания и переводом разговора на предметный уровень.",
+        anchorRu: "Бытовой якорь: если на кассе кричат, крик в ответ только подливает масла в огонь — спокойный тон и деловое решение снижают накал."
+      },
+      {
+        block: 3,
+        q: "Welcher Sicherheitsabstand sollte in einem Konfliktgespräch als Schutzzone (Distanzzone) eingehalten werden?",
+        opts: [
+          "Weniger als 30 cm (Intimzone)",
+          "Ca. 1 bis 1,5 Armlängen (ca. 1,0 bis 1,5 Meter)",
+          "Mindestens 10 Meter Abstand",
+          "Direkter Körperkontakt an der Schulter",
+          "Abstand spielt im Sicherheitsdienst keine Rolle."
+        ],
+        ans: [1],
+        expDe: "1 bis 1,5 Armlängen sichern einerseits den persönlichen Raum des Gegenübers und geben dem Mitarbeiter andererseits genug Reaktionszeit bei einem plötzlichen Angriff.",
+        anchorDe: "Alltagsanker: Beim Gespräch mit einem aufgebrachten Menschen nicht „Nasenbohrer-nah“ stehen — 1 bis 1,5 Armlängen lassen Luft und Reaktionszeit.",
+        expRu: "Дистанция в 1–1,5 длины руки не нарушает личное пространство и даёт охраннику время среагировать при внезапном ударе.",
+        anchorRu: "Бытовой якорь: не подходить вплотную к разгорячённому человеку — 1–1,5 длины руки оставляют личное пространство и время на реакцию."
+      },
+      {
+        block: 3,
+        q: "Welche zwei Merkmale sind typisch für das Verhalten einer Menschenmenge („Masse“) in einer akuten Gefahrensituation?",
+        opts: [
+          "Steigende Kritikfähigkeit und ruhige Einzelentscheidungen",
+          "Starke Emotionalität und Ansteckung / Nachahmung (Herdenverhalten)",
+          "Sinkende Kritikfähigkeit und hohe Suggestibilität",
+          "Automatische Einhaltung von Warteschlangen",
+          "Vollständige Immunität gegen Gerüchte"
+        ],
+        ans: [1, 2],
+        expDe: "In einer Masse sinkt die Kritikfähigkeit des Einzelnen, während Emotionalität, Nachahmung und Suggestibilität stark zunehmen.",
+        anchorDe: "Alltagsanker: Im Stadion oder am Bahnhof rennen plötzlich alle los — viele folgen blind, ohne selbst zu prüfen, was wirklich passiert ist.",
+        expRu: "В массе критичность мышления снижается, а эмоциональность, подражание и внушаемость резко возрастают.",
+        anchorRu: "Бытовой якорь: на вокзале или стадионе люди вдруг бегут в одну сторону — многие повторяют за толпой, не проверив причину."
+      },
+      {
+        block: 3,
+        q: "Welche Bedürfnisse stehen in der Bedürfnispyramide nach Abraham Maslow ganz unten an der Basis?",
+        opts: [
+          "Selbstverwirklichung und Anerkennung",
+          "Physiologische Grundbedürfnisse (Atmen, Essen, Trinken, Schlaf) und Sicherheitsbedürfnisse",
+          "Soziale Zugehörigkeit und Status",
+          "Beruflicher Aufstieg",
+          "Ästhetische Bedürfnisse"
+        ],
+        ans: [1],
+        expDe: "Die unterste Stufe bilden physiologische Grundbedürfnisse, direkt gefolgt von Sicherheitsbedürfnissen. Erst wenn diese gedeckt sind, werden höhere Stufen relevant.",
+        anchorDe: "Alltagsanker: Wenn man stark hungert oder friert oder sich bedroht fühlt, denkt man nicht an Hobbys oder Lob — zuerst zählen Luft, Wasser, Wärme und Sicherheit.",
+        expRu: "В основании пирамиды Маслоу лежат физиологические потребности, а сразу над ними — потребность в безопасности.",
+        anchorRu: "Бытовой якорь: когда человек голоден, замёрз или боится за жизнь, ему не до похвал — сначала базовые нужды и безопасность."
+      },
+      {
+        block: 3,
+        q: "Ein Kunde wartet eine Stunde vor einem geschlossenen Schalter und wird zunehmend gereizt. Welcher psychologische Zusammenhang erklärt diese Reaktion?",
+        opts: [
+          "Die Frustrations-Aggressions-Hypothese (Blockade eines Ziels erzeugt Frustration, die zu Aggression führen kann).",
+          "Der Halo-Effekt",
+          "Die kognitive Dissonanz beim Einkauf",
+          "Der Pygmalion-Effekt",
+          "Die selbsterfüllende Prophezeiung"
+        ],
+        ans: [0],
+        expDe: "Wird eine zielgerichtete Handlung unerwartet blockiert, entsteht Frustration. Bei geringer Frustrationstoleranz oder zusätzlichen Reizen schlägt sie leicht in Aggression um.",
+        anchorDe: "Alltagsanker: Du stehst ewig im Stau und kommst zu spät — der geplatzte Plan erzeugt Frust, der schnell in gereizten Ton kippt.",
+        expRu: "Блокировка цели вызывает фрустрацию, которая при низкой толерантности или раздражителях легко переходит в агрессию.",
+        anchorRu: "Бытовой якорь: ты долго стоишь в пробке и опаздываешь — сорванная цель даёт фрустрацию, и нервы легко сдают."
+      },
+      {
+        block: 3,
+        q: "Was versteht man in der Wahrnehmungspsychologie unter dem „Halo-Effekt“ (Hof-Effekt)?",
+        opts: [
+          "Ein einzelnes auffälliges Merkmal (z. B. gepflegter Anzug oder Tätowierung) überstrahlt die gesamte Beurteilung einer Person.",
+          "Man vergisst alles, was vor mehr als 5 Minuten passiert ist.",
+          "Man hört nur auf das, was der Vorgesetzte sagt.",
+          "Man beurteilt Menschen ausschließlich nach ihren Ausweispapieren.",
+          "Man erkennt Gefahren bei Nacht besser als am Tag."
+        ],
+        ans: [0],
+        expDe: "Beim Halo-Effekt schließt man von einer einzigen (positiven oder negativen) Eigenschaft unbewusst auf den gesamten Charakter eines Menschen — eine klassische Fehlerquelle bei Einlasskontrollen.",
+        anchorDe: "Alltagsanker: Jemand trägt einen teuren Anzug und wirkt sofort „seriös“, obwohl man ihn gar nicht kennt — ein Merkmal überdeckt den Rest.",
+        expRu: "Эффект ореола (Halo-Effekt) — одна яркая черта (например, дорогой костюм) бессознательно переносится на оценку всей личности.",
+        anchorRu: "Бытовой якорь: человек в дорогом костюме с порога кажется «солидным», хотя ты его совсем не знаешь — одна деталь заслоняет всё остальное."
+      },
+      {
+        block: 3,
+        q: "Warum sind „Ich-Botschaften“ (z. B. „Ich möchte Sie bitten, den Fluchtweg freizuhalten“) in Konflikten wirksamer als „Du-Botschaften“ („Sie stehen schon wieder im Weg!“)?",
+        opts: [
+          "Ich-Botschaften vermeiden Schuldzuweisungen und reduzieren Abwehrhaltungen beim Gegenüber.",
+          "Ich-Botschaften sind gesetzlich im StGB vorgeschrieben.",
+          "Du-Botschaften sind immer eine strafbare Beleidigung.",
+          "Ich-Botschaften klingen wie ein richterlicher Beschluss.",
+          "Ich-Botschaften ersetzen das Hausrecht."
+        ],
+        ans: [0],
+        expDe: "Du-Botschaften wirken wie Vorwürfe und lösen Gegenwehr aus; Ich-Botschaften benennen sachlich das Anliegen, ohne den Gesprächspartner anzugreifen.",
+        anchorDe: "Alltagsanker: „Mir ist wichtig, dass der Durchgang frei bleibt“ klingt ruhiger als „Du blockierst ständig alles!“.",
+        expRu: "Я-сообщения выражают просьбу без обвинений и не вызывают защитной агрессии, в отличие от Ты-обвинений.",
+        anchorRu: "Бытовой якорь: «Мне важно, чтобы проход оставался свободным» звучит мягче и эффективнее, чем «Ты опять всё загородил!»."
+      },
+      {
+        block: 3,
+        q: "Welche zwei Elemente gehören zum „Aktiven Zuhören“ im Gespräch mit einem aufgebrachten Besucher?",
+        opts: [
+          "Den Gesprächspartner ausreden lassen und Blickkontakt halten.",
+          "Das Gehörte mit eigenen Worten kurz zusammenfassen (Paraphrasieren) und Gefühle spiegeln.",
+          "Sofort unterbrechen und eigene Probleme schildern.",
+          "Während des Gesprächs auf das private Smartphone schauen.",
+          "Jede Aussage des Besuchers ironisch kommentieren."
+        ],
+        ans: [0, 1],
+        expDe: "Aktives Zuhören zeigt Wertschätzung durch Ausredenlassen, Blickkontakt, Nicken und Paraphrasieren — das nimmt dem Konflikt oft sofort die Spitze.",
+        anchorDe: "Alltagsanker: Wenn ein Freund dir seinen Ärger erzählt, sagst du: „Verstehe, dich ärgert vor allem, dass niemand Bescheid gesagt hat“ — er fühlt sich gehört.",
+        expRu: "Активное слушание включает внимание, зрительный контакт, умение не перебивать и перефразирование слов собеседника.",
+        anchorRu: "Бытовой якорь: когда друг злится и рассказывает о проблеме, ты говоришь: «Понятно, тебя больше всего бесит, что не предупредили» — человек чувствует, что его услышали."
+      },
+      {
+        block: 3,
+        q: "Wie sollte ein Sicherheitsmitarbeiter bei einer Räumung im Brandfall gegenüber Besuchern kommunizieren?",
+        opts: [
+          "Mit langen, detaillierten technischen Erklärungen zur Brandursache.",
+          "Mit kurzen, klaren, ruhigen und eindeutigen Handlungsanweisungen (Appellen).",
+          "Flüsternd, damit niemand erschrickt.",
+          "Gar nicht, da Besucher selbst nach den Schildern suchen müssen.",
+          "Mit ironischen Bemerkungen zur Auflockerung."
+        ],
+        ans: [1],
+        expDe: "In Stress- und Gefahrensituationen ist die Informationsverarbeitung eingeschränkt. Kurze, klare und ruhige Anweisungen geben Orientierung und verhindern Panik.",
+        anchorDe: "Alltagsanker: Im Rauch sagt man nicht „Aufgrund der aktuellen Lage wäre es ratsam...“, sondern kurz: „Bitte alle ruhig über den Ausgang links gehen!“.",
+        expRu: "В стрессовой ситуации люди плохо воспринимают длинные речи — нужны короткие, чёткие и спокойные команды.",
+        anchorRu: "Бытовой якорь: при дыме не читают лекцию, а говорят коротко и чётко: «Спокойно идём к выходу слева!»."
+      },
+      {
+        block: 3,
+        q: "Was bedeutet Empathie im Umgang mit Menschen im Sicherheitsgewerbe?",
+        opts: [
+          "Sich in die Lage und Gefühlswelt des Gegenübers hineinversetzen zu können, ohne zwingend dessen Regelverstoß gutzuheißen.",
+          "Jeden Regelverstoß aus Mitleid zu ignorieren.",
+          "Selbst wütend zu werden, wenn der Kunde wütend ist.",
+          "Körperliche Überlegenheit zu demonstrieren.",
+          "Vorurteile gegenüber bestimmten Personengruppen zu pflegen."
+        ],
+        ans: [0],
+        expDe: "Empathie ist Einfühlungsvermögen: Man erkennt die Emotion des anderen und nimmt sie ernst, bleibt aber in der Sache konsequent.",
+        anchorDe: "Alltagsanker: Du verstehst, dass jemand traurig ist, weil er zu spät zum Konzert kommt — das heißt aber nicht, dass das Ticket nach Beginn noch gilt.",
+        expRu: "Эмпатия — способность понять чувства собеседника, не одобряя при этом нарушение правил.",
+        anchorRu: "Бытовой якорь: ты понимаешь, как обидно опоздать на концерт, но это не значит, что правила входа можно отменить."
+      },
+      {
+        block: 3,
+        q: "Welche zwei Körperhaltungs- und Verhaltenspunkte helfen im Konfliktgespräch beim Eigenschutz und bei der Deeskalation?",
+        opts: [
+          "Leicht seitlich versetzter Stand statt frontalem Einengen.",
+          "Offene, sichtbare Hände vor dem Körper statt Fäusten oder verschränkter Arme.",
+          "Mit dem Finger aggressiv auf die Brust des Gegenübers zeigen.",
+          "Den eigenen Rückzugsweg komplett blockieren lassen.",
+          "Direkt Nase an Nase stehen."
+        ],
+        ans: [0, 1],
+        expDe: "Der leicht seitliche Stand (Schutzstellung) mit offenen, sichtbaren Händen signalisiert Gesprächsbereitschaft ohne Aggression und ermöglicht schnelle Abwehr/Ausweichen.",
+        anchorDe: "Alltagsanker: Wie beim Gespräch an der Tür — nicht wie ein Boxkampf-Gegner frontal aufbauen, sondern locker, offen und wachsam stehen.",
+        expRu: "Слегка боковая стойка и открытые видимые руки показывают отсутствие агрессии и обеспечивают готовность к защите.",
+        anchorRu: "Бытовой якорь: при разговоре у двери встать не «в лоб» как на ринге, а свободно полубоком с открытыми руками на виду."
+      },
+      {
+        block: 3,
+        q: "Welche Faktoren beeinflussen maßgeblich das menschliche Verhalten und die Wahrnehmung in Konfliktsituationen?",
+        opts: [
+          "Vorerfahrungen, Vorurteile, aktueller Stress-/Alkoholpegel und Erwartungen.",
+          "Ausschließlich die Außentemperatur.",
+          "Nur die Farbe der Dienstkleidung.",
+          "Die Anzahl der Paragraphen im BGB.",
+          "Die Uhrzeit auf der Digitaluhr."
+        ],
+        ans: [0],
+        expDe: "Wahrnehmung ist subjektiv: Vorerfahrungen, Vorurteile, Alkohol/Drogen und Stress verzerren, wie eine Person eine Kontrolle erlebt.",
+        anchorDe: "Alltagsanker: Wer müde, gestresst oder angetrunken ist, nimmt dieselbe ruhige Frage viel schneller als Angriff wahr.",
+        expRu: "Восприятие субъективно: на него сильно влияют прошлый опыт, стереотипы, стресс и алкоголь.",
+        anchorRu: "Бытовой якорь: уставший или выпивший человек даже на обычный вопрос реагирует острее, чем отдохнувший."
+      },
+      {
+        block: 3,
+        q: "Warum ist Selbstreflexion (Selbstkritik) für Sicherheitsmitarbeiter wichtig?",
+        opts: [
+          "Um eigene Vorurteile, Reizpunkte und Fehler im Gesprächsverhalten zu erkennen und künftig professioneller zu handeln.",
+          "Um sich selbst bei jedem Einsatz Vorwürfe zu machen.",
+          "Weil sie im Bewachungsgesetz als Bußgeldtatbestand steht.",
+          "Um Kunden leichter einschüchtern zu können.",
+          "Selbstreflexion ist nur für Führungskräfte nötig."
+        ],
+        ans: [0],
+        expDe: "Wer seine eigenen „Trigger“ (Reizwörter, Vorurteile) kennt, lässt sich im Dienst deutlich schwerer provozieren.",
+        anchorDe: "Alltagsanker: Wenn du weißt, welcher Spruch dich sofort auf die Palme bringt, kannst du dich innerlich darauf einstellen und ruhig bleiben.",
+        expRu: "Саморефлексия помогает знать свои слабые места и триггеры, чтобы не поддаваться на провокации на посту.",
+        anchorRu: "Бытовой якорь: если заранее знаешь, какая фраза тебя цепляет, легче не сорваться в ответ."
+      },
+      {
+        block: 3,
+        q: "Welche zwei Aussagen zum Thema „Vorurteile“ im Sicherheitsdienst treffen zu?",
+        opts: [
+          "Vorurteile sind starre, vorgefasste Meinungen ohne Prüfung des Einzelfalls.",
+          "Vorurteile führen im Dienst oft zu unfairer Behandlung und unnötiger Eskalation.",
+          "Vorurteile garantieren eine objektive Gefahrenanalyse.",
+          "Sicherheitsmitarbeiter sind durch ihre Uniform automatisch frei von Vorurteilen.",
+          "Vorurteile sollten bei Einlasskontrollen gezielt verstärkt werden."
+        ],
+        ans: [0, 1],
+        expDe: "Vorurteile verzerren die Wahrnehmung, führen zu Diskriminierung/Fehleinschätzungen und provozieren unnötige Konflikte.",
+        anchorDe: "Alltagsanker: Wer nach dem Äußeren urteilt, bevor er überhaupt ein Wort gewechselt hat, liegt oft daneben und macht unnötig Stress.",
+        expRu: "Предрассудки — это шаблонные оценки без проверки конкретной ситуации, ведущие к ошибкам и эскалации.",
+        anchorRu: "Бытовой якорь: кто судит по внешности ещё до первого слова, часто ошибается и создаёт лишний конфликт."
+      },
+      {
+        block: 3,
+        q: "Ein stark alkoholisierter Gast möchte die Veranstaltung nicht verlassen. Wie gehen Sie kommunikativ vor?",
+        opts: [
+          "Kurze, einfache Sätze verwenden, ruhig und bestimmt bleiben, keine komplexen Diskussionen führen und ggf. Unterstützung hinzuziehen.",
+          "Einen langen Vortrag über die Rechtslage nach BGB und StGB halten.",
+          "Den Gast auslachen, um ihn zum Gehen zu bewegen.",
+          "Ihn sofort ohne Vorwarnung zu Boden bringen.",
+          "Ihm weitere alkoholische Getränke anbieten."
+        ],
+        ans: [0],
+        expDe: "Bei Alkoholisierten ist die Aufnahme- und Kritikfähigkeit stark herabgesetzt: kurze, klare Sätze, keine Grundsatzdiskussionen, Eigenschutz und Teamarbeit.",
+        anchorDe: "Alltagsanker: Mit jemandem, der schon zu viel getrunken hat, diskutiert man nicht über Gesetzbücher — man bleibt ruhig, klar und holt einen Kollegen dazu.",
+        expRu: "С нетрезвыми людьми сложные споры бесполезны: нужны короткие простые фразы, спокойная твёрдость и подстраховка напарника.",
+        anchorRu: "Бытовой якорь: с человеком, который перебрал, не спорят о статьях закона — говорят коротко, твёрдо и зовут напарника."
+      },
+
+      // ==================== BLOCK 4: GEWERBERECHT (10 вопросов, по 1 баллу) ====================
+      {
+        block: 4,
+        q: "Für welche zwei Tätigkeiten ist nach § 34a Abs. 1a Satz 2 GewO zwingend die erfolgreich abgelegte Sachkundeprüfung erforderlich?",
+        opts: [
+          "Kontrollgänge im öffentlichen Verkehrsraum oder in Hausrechtsbereichen mit tatsächlich öffentlichem Verkehr (z. B. City-Streife).",
+          "Schutz vor Ladendieben (Kaufhausdetektiv).",
+          "Tagdienst als Pförtner an einer nicht-öffentlichen Werkspforte ohne Publikumsverkehr.",
+          "Reine Bewachung eines leeren Lagerplatzes außerhalb der Öffentlichkeit.",
+          "Montage von Alarmanlagen durch einen Elektriker."
+        ],
+        ans: [0, 1],
+        expDe: "Nach § 34a Abs. 1a Satz 2 GewO ist die Sachkundeprüfung Pflicht u. a. für Kontrollgänge im öffentlichen Verkehrsraum (Nr. 1) und Schutz vor Ladendieben (Nr. 2).",
+        anchorDe: "Alltagsanker: Wer als Kaufhausdetektiv im Laden auf Diebe achtet oder auf öffentlichen Straßen Streife geht, braucht die Sachkundeprüfung — nicht nur eine Kurzeinweisung.",
+        expRu: "Экзамен Sachkundeprüfung обязателен по § 34a Abs. 1a GewO для патрулирования в общественных местах и работы детективом в магазине.",
+        anchorRu: "Бытовой якорь: кто работает детективом в торговом зале или ходит в уличный патруль, должен сдать Sachkundeprüfung, а не ограничиться коротким инструктажем."
+      },
+      {
+        block: 4,
+        q: "Welche zwei Voraussetzungen gehören zu den typischen Anforderungen an den Gewerbetreibenden für die Erlaubnis nach § 34a Abs. 1 GewO?",
+        opts: [
+          "Erforderliche Zuverlässigkeit und geordnete Vermögensverhältnisse.",
+          "Nachweis der Sachkundeprüfung und einer Berufshaftpflichtversicherung.",
+          "Verzicht auf jede behördliche Prüfung.",
+          "Mindestalter von 14 Jahren.",
+          "Besitz einer eigenen Polizeiwache."
+        ],
+        ans: [0, 1],
+        expDe: "Für die Erlaubnis nach § 34a Abs. 1 GewO braucht der Gewerbetreibende Zuverlässigkeit, geordnete Vermögensverhältnisse, Sachkunde und Haftpflichtversicherung (§ 6 BewachV).",
+        anchorDe: "Alltagsanker: Wer ein eigenes Sicherheitsunternehmen eröffnet, muss sauber dastehen (Zuverlässigkeit & Finanzen), die Prüfung haben und versichert sein.",
+        expRu: "Для лицензии предпринимателя по § 34a Abs. 1 GewO нужны надёжность, порядок в финансах, сданная Sachkundeprüfung и страховка ответственности.",
+        anchorRu: "Бытовой якорь: кто открывает своё охранное дело, должен быть надёжным, иметь порядок в финансах, экзамен и страховку."
+      },
+      {
+        block: 4,
+        q: "Wann muss ein Bewachungsunternehmer eine neue Wachperson im Bewacherregister anmelden?",
+        opts: [
+          "Spätestens drei Monate nach der ersten Gehaltszahlung.",
+          "Vor Aufnahme der Tätigkeit (§ 34a Abs. 6 GewO); der Einsatz ist erst nach behördlicher Freigabe zulässig.",
+          "Nur wenn die Wachperson eine Schusswaffe trägt.",
+          "Gar nicht, das macht die IHK automatisch.",
+          "Erst bei der Kündigung des Mitarbeiters."
+        ],
+        ans: [1],
+        expDe: "Nach § 34a Abs. 6 GewO muss die Anmeldung im Bewacherregister vor Aufnahme der Tätigkeit erfolgen. Ohne behördliche Prüfung der Zuverlässigkeit und Qualifikation darf die Person nicht eingesetzt werden.",
+        anchorDe: "Alltagsanker: Erst Papiere/Register prüfen lassen und grünes Licht abwarten — dann auf den Posten schicken, genau wie den Führerschein vor der ersten Fahrt prüfen.",
+        expRu: "Регистрация в Bewacherregister обязательна ДО начала работы (§ 34a Abs. 6 GewO), после проверки надёжности ведомством.",
+        anchorRu: "Бытовой якорь: сначала дождаться допуска и регистрации, потом ставить на смену — как проверить права перед выездом."
+      },
+      {
+        block: 4,
+        q: "Welche Angaben müssen auf dem Ausweis einer Wachperson nach § 18 BewachV stehen?",
+        opts: [
+          "Name und Vorname der Wachperson, Name und Anschrift des Gewerbetreibenden, Bezeichnung/Beleg des Bewacherregisters sowie Unterschriften.",
+          "Die private Wohnanschrift und Kontonummer der Wachperson.",
+          "Die Schuhgröße und Blutgruppe der Wachperson.",
+          "Nur der Vorname ohne Firmenangabe.",
+          "Das Gehalt der Wachperson."
+        ],
+        ans: [0],
+        expDe: "Nach § 18 BewachV enthält der Ausweis u. a. Name/Vorname der Wachperson, Name/Anschrift des Gewerbetreibenden, Registrierungsnummern aus dem Bewacherregister sowie Unterschriften — niemals die Privatadresse des Mitarbeiters!",
+        anchorDe: "Alltagsanker: Auf dem Dienstausweis steht Firma und Name — aber nicht deine Privatwohnung, damit nicht jeder Besucher weiß, wo du abends wohnst.",
+        expRu: "По § 18 BewachV в удостоверении указываются имя и фамилия охранника, фирма и номера из Bewacherregister — но никогда домашний адрес работника!",
+        anchorRu: "Бытовой якорь: в служебном удостоверении указаны имя и фирма, но не твой домашний адрес, чтобы посторонние не знали, где ты живёшь."
+      },
+      {
+        block: 4,
+        q: "Wann besteht für eine Wachperson eine gesetzliche Pflicht, ein deutlich sichtbares Schild mit Namen oder Kennnummer sowie dem Namen des Gewerbetreibenden zu tragen (§ 18 Abs. 2 BewachV)?",
+        opts: [
+          "Bei Kontrollgängen im öffentlichen Verkehrsraum, im Einlassbereich gastgewerblicher Diskotheken sowie bei der Bewachung von Aufnahmeeinrichtungen (Asyl) und zugangsbeschränkten Großveranstaltungen.",
+          "Ausschließlich beim Reinigen der Dienstfahrzeuge.",
+          "Niemals, Namens- oder Kennnummernschilder sind verboten.",
+          "Nur im Büro des Sicherheitsunternehmens.",
+          "Nur wenn der Mitarbeiter im Urlaub ist."
+        ],
+        ans: [0],
+        expDe: "§ 18 Abs. 2 BewachV schreibt das sichtbare Tragen eines Schildes (Name oder Kennnummer + Firma) für die sensiblen Bereiche nach § 34a Abs. 1a Satz 2 Nr. 1, 3 und 5 GewO vor.",
+        anchorDe: "Alltagsanker: An der Diskotür oder auf öffentlicher Straße muss man klar erkennbar sein (Name/Nummer + Firma), damit Gäste und Behörden wissen, wer dort arbeitet.",
+        expRu: "§ 18 Abs. 2 BewachV обязывает открыто носить бейдж (имя или личный номер + название фирмы) при патрулировании в общественных местах, на дискотеках, в приютах и на крупных мероприятиях.",
+        anchorRu: "Бытовой якорь: на входе в клуб или в уличном обходе бейдж виден сразу, чтобы люди знали, кто перед ними."
+      },
+      {
+        block: 4,
+        q: "Welche Vorschrift regelt die Dienstanweisung im Bewachungsgewerbe?",
+        opts: [
+          "§ 17 BewachV: Der Gewerbetreibende hat den Wachdienst durch eine Dienstanweisung zu regeln und diese der Wachperson gegen Empfangsbescheinigung auszuhändigen.",
+          "§ 1 BGB",
+          "§ 32 StGB",
+          "§ 242 StGB",
+          "Es gibt keine Pflicht zur Dienstanweisung."
+        ],
+        ans: [0],
+        expDe: "Nach § 17 BewachV muss eine schriftliche Dienstanweisung erstellt und der Wachperson gegen Empfangsbescheinigung ausgehändigt werden (inkl. Hinweis, dass keine hoheitlichen Befugnisse bestehen).",
+        anchorDe: "Alltagsanker: Wie eine klare Spielanleitung vor dem Start — du bekommst die Regeln schriftlich und unterschreibst, dass du sie erhalten hast.",
+        expRu: "По § 17 BewachV предприниматель обязан выдать письменную служебную инструкцию под расписку, включая указание, что охранник не имеет прав полиции/госорганов.",
+        anchorRu: "Бытовой якорь: как понятная инструкция перед стартом — правила выдают на бумаге и берут подпись о получении."
+      },
+      {
+        block: 4,
+        q: "Wie hat die Dienstkleidung von Wachpersonen nach § 19 BewachV beschaffen zu sein?",
+        opts: [
+          "Sie darf nicht mit Uniformen von Angehörigen der Streitkräfte oder behördlichen Vollzugsorganen (z. B. Polizei) verwechselt werden können.",
+          "Sie muss exakt wie eine Polizeiuniform aussehen, um Respekt zu erzeugen.",
+          "Die Farbe Blau ist im Sicherheitsgewerbe generell verboten.",
+          "Wachpersonen dürfen Dienstkleidung privat auf dem Nachhauseweg ohne Einschränkung tragen.",
+          "Es gibt keinerlei Vorschriften zur Dienstkleidung."
+        ],
+        ans: [0],
+        expDe: "Nach § 19 BewachV darf Dienstkleidung nicht mit Uniformen von Polizei, Bundeswehr oder Behörden verwechselbar sein (Verwechslungsverbot).",
+        anchorDe: "Alltagsanker: Keine Polizei-Optik vortäuschen — man soll sofort erkennen, dass es ein privater Sicherheitsdienst ist und keine Behörde.",
+        expRu: "По § 19 BewachV форменная одежда охранников не должна допускать смешения с формой полиции, армии или государственных органов.",
+        anchorRu: "Бытовой якорь: не маскироваться под полицию — форма должна сразу показывать, что это частная охрана."
+      },
+      {
+        block: 4,
+        q: "Wie lange müssen Unterlagen und Aufzeichnungen nach § 21 BewachV vom Bewachungsunternehmer aufbewahrt werden?",
+        opts: [
+          "Bis zum Ablauf von drei Jahren nach dem Schluss des Kalenderjahres, in dem sie entstanden sind.",
+          "Nur 24 Stunden.",
+          "30 Jahre.",
+          "Gar nicht.",
+          "Nur bis zum Monatsende."
+        ],
+        ans: [0],
+        expDe: "§ 21 BewachV schreibt eine Aufbewahrungsfrist von 3 Jahren (beginnend mit dem Schluss des Kalenderjahres der Entstehung) vor.",
+        anchorDe: "Alltagsanker: Wie wichtige Rechnungen und Nachweise im Ordner — im Bewachungsgewerbe gilt die 3-Jahres-Frist nach Jahresende.",
+        expRu: "§ 21 BewachV устанавливает срок хранения документов охранного предприятия в 3 года (с конца календарного года их создания).",
+        anchorRu: "Бытовой якорь: как важные бумаги в папке — в BewachV ориентир 3 года после окончания календарного года."
+      },
+      {
+        block: 4,
+        q: "Was gilt für den Einsatz von Schusswaffen durch Wachpersonen nach § 20 BewachV?",
+        opts: [
+          "Jede Wachperson darf ihre private Schusswaffe im Dienst mitführen.",
+          "Wachpersonen dürfen Schusswaffen nur führen, wenn der Gewerbetreibende dies ausdrücklich gestattet, eine waffenrechtliche Erlaubnis vorliegt und das Führen der Behörde angezeigt wurde.",
+          "Schusswaffen sind im Sicherheitsdienst vollständig verboten, auch beim Geld- und Werttransport.",
+          "Die Sachkundeprüfung § 34a GewO ersetzt den Waffenschein.",
+          "Schusswaffen dürfen ohne Genehmigung bei jeder Diskothek getragen werden."
+        ],
+        ans: [1],
+        expDe: "Nach § 20 BewachV bedarf das Führen von Schusswaffen der ausdrücklichen Gestattung durch den Unternehmer, der waffenrechtlichen Erlaubnisse und der Anzeige bei der zuständigen Behörde.",
+        anchorDe: "Alltagsanker: Niemals auf eigene Faust — es braucht Chef-Erlaubnis, Waffenrechtspapiere und Behördenmeldung.",
+        expRu: "По § 20 BewachV ношение огнестрельного оружия на посту требует разрешения работодателя, лицензии по закону об оружии и уведомления ведомства.",
+        anchorRu: "Бытовой якорь: никакой самодеятельности — нужно разрешение фирмы, документы по закону об оружии и уведомление ведомства."
+      },
+      {
+        block: 4,
+        q: "Wann liegt eine Ordnungswidrigkeit nach § 144 GewO i. V. m. § 22 BewachV vor?",
+        opts: [
+          "Wenn ein Unternehmer eine Wachperson ohne vorherige Zuverlässigkeitsprüfung / Anmeldung im Bewacherregister einsetzt.",
+          "Wenn ein Mitarbeiter freundlich grüßt.",
+          "Wenn der Unternehmer eine Betriebshaftpflichtversicherung abschließt.",
+          "Wenn die Dienstanweisung gegen Empfangsbescheinigung übergeben wird.",
+          "Wenn die Aufbewahrungsfrist von 3 Jahren eingehalten wird."
+        ],
+        ans: [0],
+        expDe: "Der Einsatz nicht geprüfter/nicht gemeldeter Wachpersonen ist eine typische Ordnungswidrigkeit (§ 144 GewO / § 22 BewachV), die mit empfindlichem Bußgeld geahndet wird.",
+        anchorDe: "Alltagsanker: Wie schwarzfahren oder ohne gültiges Ticket in die Bahn steigen — wer Regeln beim Einsatz bricht, riskiert ein Bußgeld.",
+        expRu: "Допуск сотрудника к работе без проверки надёжности и регистрации в реестре — административное правонарушение по § 144 GewO.",
+        anchorRu: "Бытовой якорь: как ехать без билета — нарушение правил допуска на пост грозит штрафом."
+      },
+
+      // ==================== BLOCK 5: ÖFFENTL. SICHERHEIT & ORDNUNG (8 вопросов, по 2 балла) ====================
+      {
+        block: 5,
+        q: "Welche zwei Aussagen zum Verhältnis zwischen Grundrechten (Grundgesetz) und dem Sicherheitsgewerbe sind richtig?",
+        opts: [
+          "Grundrechte sind primär Abwehrrechte des Bürgers gegen den Staat.",
+          "Sicherheitsmitarbeiter sind Polizisten mit hoheitlichen Eingriffsbefugnissen.",
+          "Im Privatrecht wirken Grundrechte über die sogenannte mittelbare Drittwirkung (z. B. über Generalklauseln und Strafgesetze).",
+          "Die Menschenwürde (Art. 1 Abs. 1 GG) ist antastbar, wenn ein Besucher kein Ticket hat.",
+          "Grundrechte gelten nur für deutsche Staatsangehörige, nicht für Ausländer."
+        ],
+        ans: [0, 2],
+        expDe: "Grundrechte binden unmittelbar die staatliche Gewalt (Art. 1 Abs. 3 GG). Zwischen Privaten wirken sie mittelbar (mittelbare Drittwirkung). Sicherheitsmitarbeiter haben keine Hoheitsrechte, sondern Jedermannsrechte.",
+        anchorDe: "Alltagsanker: Das Grundgesetz schützt dich zuerst vor dem Staat — und prägt über Gesetze auch den fairen Umgang zwischen Nachbarn oder Gästen und Türstehern.",
+        expRu: "Основные права направлены прежде всего против государства, а между частными лицами действуют опосредованно (mittelbare Drittwirkung). У охранников нет властных полномочий государства.",
+        anchorRu: "Бытовой якорь: Grundgesetz в первую очередь защищает гражданина от государства, а через законы задаёт рамки уважения и между обычными людьми."
+      },
+      {
+        block: 5,
+        q: "Welche Befugnisse stehen einem privaten Sicherheitsmitarbeiter im Vergleich zu einem Polizeivollzugsbeamten zu?",
+        opts: [
+          "Er besitzt die gleichen hoheitlichen Eingriffsrechte wie die Polizei.",
+          "Er hat ausschließlich die Jedermannsrechte (z. B. Notwehr, Notstand, Selbsthilfe, § 127 Abs. 1 StPO) sowie vertraglich übertragene Hausrechte.",
+          "Er darf Platzverweise im öffentlichen Straßenraum erteilen.",
+          "Er darf Personen gegen ihren Willen durchsuchen und Personalausweise beschlagnahmen.",
+          "Er darf Fahrzeuge im öffentlichen Straßenverkehr anhalten."
+        ],
+        ans: [1],
+        expDe: "Private Sicherheitsmitarbeiter haben keine Hoheitsrechte! Sie handeln ausschließlich auf Grundlage der Jedermannsrechte und des vom Auftraggeber übertragenen Hausrechts.",
+        anchorDe: "Alltagsanker: Ein Hausmeister oder Türsteher ist kein Polizist — er hat keine Blaulicht-Befugnisse, sondern Bürgerrechte plus Hausrecht.",
+        expRu: "Частные охранники не обладают властными полномочиями полиции — они действуют только в рамках прав каждого гражданина (Jedermannsrechte) и переданного Hausrecht.",
+        anchorRu: "Бытовой якорь: охранник — не полицейский, у него нет властных прав органов, а только права каждого гражданина и домовое право объекта."
+      },
+      {
+        block: 5,
+        q: "Ein Besucher möchte bei einer Einlasskontrolle seine mitgeführte Tasche nicht öffnen. Was gilt rechtlich?",
+        opts: [
+          "Der Sicherheitsmitarbeiter darf die Tasche gegen den Willen des Besuchers gewaltsam öffnen.",
+          "Ohne Einwilligung des Besuchers darf die Tasche nicht durchsucht werden; der Mitarbeiter kann aber im Rahmen des Hausrechts den Zutritt verweigern.",
+          "Das Hausrecht erlaubt immer körperliche Durchsuchungen.",
+          "Der Mitarbeiter darf den Besucher wegen Verdachts festnehmen.",
+          "Taschenkontrollen sind in Deutschland generell verboten."
+        ],
+        ans: [1],
+        expDe: "Taschen- und Personenkontrollen durch Private setzen die freiwillige Einwilligung voraus. Verweigert der Gast die Kontrolle, darf nicht gegen seinen Willen durchsucht werden — Konsequenz ist die Zutrittsverweigerung (Hausrecht).",
+        anchorDe: "Alltagsanker: Niemand darf deinen Rucksack einfach aufreißen — wenn du „Nein“ sagst, darf der Türsteher dich einfach nicht reinlassen.",
+        expRu: "Осмотр сумок частной охраной возможен только с добровольного согласия посетителя. При отказе открывать сумку нельзя — можно лишь отказать во входе по Hausrecht.",
+        anchorRu: "Бытовой якорь: никто не вправе силой открыть твой рюкзак — если ты против, охранник просто не пускает внутрь."
+      },
+      {
+        block: 5,
+        q: "Was besagt das Gewaltenteilungsprinzip (Art. 20 Abs. 2 GG) in der Bundesrepublik Deutschland?",
+        opts: [
+          "Die Staatsgewalt ist auf Gesetzgebung (Legislative), vollziehende Gewalt (Exekutive) und Rechtsprechung (Judikative) aufgeteilt.",
+          "Die Polizei erlässt Gesetze und verurteilt Straftäter.",
+          "Sicherheitsunternehmen sind Teil der Exekutive.",
+          "Die Gerichte unterstehen den Weisungen der Polizei.",
+          "Alle Staatsgewalt liegt allein beim Bundespräsidenten."
+        ],
+        ans: [0],
+        expDe: "Gewaltenteilung nach Art. 20 Abs. 2 GG trennt Legislative (Parlamente), Exekutive (Regierung, Verwaltung, Polizei) und Judikative (Gerichte) zur gegenseitigen Kontrolle.",
+        anchorDe: "Alltagsanker: Einer schreibt die Regeln (Gesetzgeber), einer führt sie aus (Verwaltung/Polizei), und der Richter urteilt — nicht alles in einer Hand.",
+        expRu: "Принцип разделения властей (Art. 20 Abs. 2 GG) делит государственную власть на законодательную, исполнительную и судебную ветви.",
+        anchorRu: "Бытовой якорь: одни пишут правила, другие следят за порядком, а судья выносит решение — власти разделены."
+      },
+      {
+        block: 5,
+        q: "Welche zwei Aussagen zum Schutz der Freiheit der Person (Art. 2 Abs. 2 / Art. 104 GG) sind im Sicherheitsalltag wichtig?",
+        opts: [
+          "Über die Zulässigkeit und Fortdauer einer Freiheitsentziehung entscheidet allein der Richter (Richtervorbehalt).",
+          "Eine vorläufige Festnahme nach § 127 Abs. 1 StPO darf nicht zu willkürlichem Einsperren oder endloser Dauer führen.",
+          "Jeder Sicherheitsmitarbeiter darf jemanden ohne Grund 48 Stunden festhalten.",
+          "Freiheitsentziehung ist im Grundgesetz nicht erwähnt.",
+          "Der Hausmeister kann einen Haftbefehl ausstellen."
+        ],
+        ans: [0, 1],
+        expDe: "Freiheit ist ein hohes Grundrecht; bei Freiheitsentziehungen gilt der Richtervorbehalt (Art. 104 Abs. 2 GG), und vorläufiges Festhalten nach § 127 StPO ist strikt zweckgebunden und zeitlich begrenzt.",
+        anchorDe: "Alltagsanker: Festhalten bei frischer Tat ist nur kurz bis zur Polizei gedacht — niemand darf willkürlich weggesperrt werden.",
+        expRu: "Свобода личности охраняется конституцией: решение о лишении свободы — за судьёй (Art. 104 Abs. 2 GG), а задержание по § 127 StPO строго ограничено целью и временем.",
+        anchorRu: "Бытовой якорь: задержать с поличным можно лишь до приезда полиции — запирать человека просто так нельзя."
+      },
+      {
+        block: 5,
+        q: "Welche zwei Aussagen zur Versammlungsfreiheit (Art. 8 GG) sind korrekt?",
+        opts: [
+          "Alle Deutschen haben das Recht, sich ohne Anmeldung oder Erlaubnis friedlich und ohne Waffen zu versammeln.",
+          "Für Versammlungen unter freiem Himmel kann dieses Recht durch Gesetz (Versammlungsgesetz) beschränkt werden (Anmeldepflicht).",
+          "Auch bewaffnete Versammlungen sind durch Art. 8 GG geschützt.",
+          "Versammlungen in geschlossenen Räumen müssen 4 Wochen vorher genehmigt werden.",
+          "Private Sicherheitsdienste dürfen öffentliche Demonstrationen auflösen."
+        ],
+        ans: [0, 1],
+        expDe: "Art. 8 Abs. 1 GG schützt friedliche Versammlungen ohne Waffen; nach Art. 8 Abs. 2 GG gelten für Versammlungen unter freiem Himmel gesetzliche Beschränkungen (Anmeldepflicht).",
+        anchorDe: "Alltagsanker: Friedlich und unbewaffnet zusammenkommen ist Grundrecht — auf der Straße/dem Platz greifen zusätzlich Regeln wie Anmeldung.",
+        expRu: "Art. 8 GG гарантирует право мирно и без оружия собираться; для собраний под открытым небом законом установлена обязанность уведомления.",
+        anchorRu: "Бытовой якорь: мирно и без оружия собираться можно по Grundgesetz, а на улице добавляются правила уведомления."
+      },
+      {
+        block: 5,
+        q: "Welche Bedeutung hat das Brief-, Post- und Fernmeldegeheimnis (Art. 10 GG) in der Poststelle eines bewachten Unternehmens?",
+        opts: [
+          "Verschlossene Briefe dürfen vom Sicherheitsmitarbeiter ohne ausdrückliche Befugnis/Einwilligung nicht geöffnet werden.",
+          "Sicherheitsmitarbeiter dürfen alle Privatbriefe der Angestellten lesen.",
+          "Art. 10 GG gilt nur für Pakete über 10 kg.",
+          "E-Mails und Telefonate fallen nicht unter Art. 10 GG.",
+          "Im Nachtdienst darf jede Post geöffnet werden."
+        ],
+        ans: [0],
+        expDe: "Verschlossene Postsendungen sind geschützt (Art. 10 GG / § 202 StGB — Verletzung des Briefgeheimnisses). Ohne klare rechtliche Befugnis dürfen verschlossene Sendungen nicht geöffnet werden.",
+        anchorDe: "Alltagsanker: Ein zugeklebter Brief an einen Kollegen ist tabu — man öffnet fremde Post nicht aus Neugier.",
+        expRu: "Закрытые почтовые отправления защищены тайной переписки (Art. 10 GG и § 202 StGB) — вскрывать их без полномочий запрещено.",
+        anchorRu: "Бытовой якорь: заклеенное письмо коллеге — не для чужих глаз; вскрывать чужую корреспонденцию из любопытства нельзя."
+      },
+      {
+        block: 5,
+        q: "Was besagt der Grundsatz der Verhältnismäßigkeit im Recht?",
+        opts: [
+          "Eine Maßnahme muss geeignet, erforderlich (mildestes Mittel) und angemessen (zumutbar) sein.",
+          "Man wählt immer das härteste verfügbare Mittel zur Abschreckung.",
+          "Verhältnismäßigkeit gilt nur für Gerichte, nicht für Sicherheitskräfte.",
+          "Ein milderes Mittel muss nie geprüft werden.",
+          "Der Schaden darf beliebig hoch sein."
+        ],
+        ans: [0],
+        expDe: "Verhältnismäßigkeit besteht aus drei Stufen: 1. Geeignetheit, 2. Erforderlichkeit (mildestes gleich wirksames Mittel) und 3. Angemessenheit.",
+        anchorDe: "Alltagsanker: Um eine Mücke an der Wand zu treffen, nimmt man kein Vorschlaghammer-Brett — immer das passende und möglichst schonende Mittel.",
+        expRu: "Принцип соразмерности включает три элемента: пригодность, необходимость (самое мягкое из эффективных средств) и адекватность.",
+        anchorRu: "Бытовой якорь: чтобы убрать пылинку или прогнать нарушителя, берут соразмерное и по возможности самое мягкое действие."
+      },
+
+      // ==================== BLOCK 6: DATENSCHUTZ (4 вопроса, по 1 баллу) ====================
+      {
+        block: 6,
+        q: "Welche Daten gelten nach DSGVO als „personenbezogene Daten“?",
+        opts: [
+          "Alle Informationen, die sich auf eine identifizierte oder identifizierbare natürliche Person beziehen (z. B. Name, Kfz-Kennzeichen, Videoaufnahmen).",
+          "Nur die Daten von juristischen Personen (z. B. einer GmbH).",
+          "Ausschließlich anonymisierte statistische Zahlen ohne Personenbezug.",
+          "Nur handschriftliche Notizen auf gelbem Papier.",
+          "Ausschließlich Passwörter von Servern."
+        ],
+        ans: [0],
+        expDe: "Personenbezogene Daten (Art. 4 Nr. 1 DSGVO) sind alle Informationen über eine bestimmte oder bestimmbare natürliche Person — dazu zählen im Wachdienst auch Kfz-Kennzeichen, Besucherlisten und Videoaufnahmen.",
+        anchorDe: "Alltagsanker: Sobald man anhand von Name, Autokennzeichen oder Kamerabild erkennen kann, um welchen Menschen es geht, sind es personenbezogene Daten.",
+        expRu: "Персональные данные (Art. 4 № 1 DSGVO) — любая информация об идентифицируемом физическом лице, включая номера авто, журналы посетителей и видеозаписи.",
+        anchorRu: "Бытовой якорь: если по ФИО, номеру машины или записи камеры можно узнать конкретного человека — это персональные данные."
+      },
+      {
+        block: 6,
+        q: "Was gilt für die Videoüberwachung öffentlich zugänglicher Räume nach § 4 BDSG / DSGVO?",
+        opts: [
+          "Der Umstand der Beobachtung und der Name/Kontaktdaten des Verantwortlichen sind durch geeignete Maßnahmen (Hinweisschild) erkennbar zu machen.",
+          "Heimliche Videoüberwachung von Kunden im Verkaufsraum ist jederzeit erlaubt.",
+          "Videoaufnahmen dürfen beliebig im Internet veröffentlicht werden.",
+          "Es braucht keinerlei Rechtsgrundlage oder Zweckbindung.",
+          "Umkleidekabinen und Toiletten dürfen dauerhaft gefilmt werden."
+        ],
+        ans: [0],
+        expDe: "Videoüberwachung öffentlich zugänglicher Räume erfordert Transparenz (deutliches Hinweisschild mit Verantwortlichem) und einen legitimen Zweck; Intimsphäre (Toiletten/Umkleiden) ist absolut tabu.",
+        anchorDe: "Alltagsanker: Wie das Schild „Videoüberwachung“ am Eingang — niemand soll heimlich gefilmt werden, und in Umkleiden/Toiletten gilt ohnehin tabu.",
+        expRu: "Видеонаблюдение в общедоступных зонах требует заметной таблички с данными ответственного лица; туалеты и примерочные снимать категорически запрещено.",
+        anchorRu: "Бытовой якорь: как табличка «Ведётся видеонаблюдение» на входе — скрытых камер быть не должно, а в туалетах и примерочных съёмка запрещена."
+      },
+      {
+        block: 6,
+        q: "Welche zwei Grundsätze der Verarbeitung personenbezogener Daten sind in Art. 5 DSGVO verankert?",
+        opts: [
+          "Zweckbindung und Datenminimierung (nur so viele Daten erheben wie nötig).",
+          "Speicherbegrenzung und Integrität/Vertraulichkeit.",
+          "Unbegrenzte Speicherung aller Besucherdaten auf Lebenszeit.",
+          "Freie Weitergabe von Besucherlisten an Werbefirmen.",
+          "Verarbeitung ohne Rechtsgrundlage."
+        ],
+        ans: [0, 1],
+        expDe: "Art. 5 DSGVO normiert u. a. Rechtmäßigkeit/Transparenz, Zweckbindung, Datenminimierung, Richtigkeit, Speicherbegrenzung sowie Integrität und Vertraulichkeit.",
+        anchorDe: "Alltagsanker: Für den Besucherpass fragt man nur das Nötige, nutzt es nur für den Zutritt und löscht es wieder, statt es ewig zu sammeln.",
+        expRu: "Art. 5 DSGVO закрепляет принципы целевого назначения, минимизации данных, ограничения срока хранения и конфиденциальности.",
+        anchorRu: "Бытовой якорь: для пропуска спрашивают только нужные данные, используют строго по делу и не хранят вечно."
+      },
+      {
+        block: 6,
+        q: "Ein Bekannter ruft in der Pforte an und fragt, ob Herr Müller heute im Unternehmen anwesend ist. Wie verhält sich der Sicherheitsmitarbeiter datenschutzkonform?",
+        opts: [
+          "Er gibt keine Auskunft über die Anwesenheit an unbefugte Dritte und leitet den Anruf höchstens intern weiter oder bittet um Rückruf durch Herrn Müller.",
+          "Er liest dem Anrufer das gesamte Besucher- und Mitarbeiterbuch vor.",
+          "Er gibt sofort die private Handynummer von Herrn Müller heraus.",
+          "Er schickt ein Foto vom Dienstplan per WhatsApp.",
+          "Er bestätigt die Anwesenheit und nennt die genaue Büronummer."
+        ],
+        ans: [0],
+        expDe: "Anwesenheitsdaten sind personenbezogene Daten. Eine Herausgabe an Dritte ohne Rechtsgrundlage ist eine Datenschutzverletzung (Art. 5, 6 DSGVO).",
+        anchorDe: "Alltagsanker: Am Telefon verrät man Unbekannten nicht, ob jemand gerade im Haus ist — lieber intern verbinden oder keine Auskunft geben.",
+        expRu: "Сведения о присутствии сотрудника на объекте — персональные данные; сообщать их посторонним по телефону запрещено.",
+        anchorRu: "Бытовой якорь: по телефону посторонним не говорят, на месте ли человек — лучше вежливо переключить внутри или отказать в справке."
+      },
+
+      // ==================== BLOCK 7: DGUV (8 вопросов, по 1 баллу) ====================
+      {
+        block: 7,
+        q: "Welcher oberste Grundsatz gilt nach DGUV Vorschrift 1 bei Gefahrensituationen im Wach- und Sicherungsdienst?",
+        opts: [
+          "Sachwertschutz geht immer vor Menschenleben.",
+          "Eigenschutz geht vor Fremdschutz (Selbstschutz beachten).",
+          "Bei Brand zuerst alle Aktenordner retten.",
+          "Persönliche Schutzausrüstung (PSA) darf nach eigenem Geschmack weggelassen werden.",
+          "Unfälle müssen nur gemeldet werden, wenn ein Knochenbruch vorliegt."
+        ],
+        ans: [1],
+        expDe: "Nach DGUV Vorschrift 1 hat die Sicherheit und Gesundheit der Versicherten oberste Priorität — kein Sachwert rechtfertigt Lebensgefahr für den Mitarbeiter.",
+        anchorDe: "Alltagsanker: Wie im Flugzeug („erst eigene Sauerstoffmaske aufsetzen“) — ohne deine eigene Sicherheit kannst du niemandem helfen.",
+        expRu: "По DGUV Vorschrift 1 личная безопасность сотрудника всегда важнее спасения материальных ценностей.",
+        anchorRu: "Бытовой якорь: как в самолёте («сначала маску на себя») — если сам пострадаешь, никому не поможешь."
+      },
+      {
+        block: 7,
+        q: "Welche zwei Pflichten treffen Versicherte (Beschäftigte) nach § 15 DGUV Vorschrift 1 im Arbeitsalltag?",
+        opts: [
+          "Bereitgestellte Persönliche Schutzausrüstung (PSA) bestimmungsgemäß benutzen.",
+          "Weisungen zur Sicherheit und Gesundheitsschutz befolgen und erkennbare Mängel melden.",
+          "Schutzhelme und Warnwesten auf der Baustelle im Kofferraum liegen lassen.",
+          "Schutzeinrichtungen aus Bequemlichkeit abschalten.",
+          "Unfälle vor dem Vorgesetzten verheimlichen."
+        ],
+        ans: [0, 1],
+        expDe: "Nach § 15 DGUV Vorschrift 1 müssen Beschäftigte bereitgestellte PSA nutzen, Sicherheitsanweisungen beachten und festgestellte Gefahren/Mängel melden.",
+        anchorDe: "Alltagsanker: Wer den Helm aufsetzt und kaputte Treppenstufen meldet, schützt sich und Kollegen — wer PSA ignoriert, riskiert Verletzungen.",
+        expRu: "Согласно § 15 DGUV Vorschrift 1 работники обязаны использовать выданную PSA, соблюдать правила безопасности и сообщать о неполадках.",
+        anchorRu: "Бытовой якорь: надеть каску и сообщить о скользкой ступеньке — обычная привычка, сохраняющая здоровье."
+      },
+      {
+        block: 7,
+        q: "Was regelt speziell die DGUV Vorschrift 23?",
+        opts: [
+          "Wach- und Sicherungsdienste (spezielle Unfallverhütungsvorschrift für das Bewachungsgewerbe).",
+          "Den Straßenverkehr auf Autobahnen.",
+          "Die Besteuerung von Sicherheitsunternehmen.",
+          "Die Ausbildung von Rettungsschwimmern.",
+          "Die Herstellung von Tresoren."
+        ],
+        ans: [0],
+        expDe: "Die DGUV Vorschrift 23 ist die branchenspezifische Unfallverhütungsvorschrift für „Wach- und Sicherungsdienste“ (z. B. Objektbegehung, Diensthunde, Geld- und Werttransporte).",
+        anchorDe: "Alltagsanker: DGUV Vorschrift 1 gilt allgemein, DGUV Vorschrift 23 ist das Spezial-Regelbuch genau für den Wach- und Sicherheitsdienst.",
+        expRu: "DGUV Vorschrift 23 — специальный регламент по предотвращению несчастных случаев именно для охранных и сторожевых служб.",
+        anchorRu: "Бытовой якорь: DGUV Vorschrift 1 — общие правила охраны труда, а DGUV Vorschrift 23 — специальный свод именно для охраны."
+      },
+      {
+        block: 7,
+        q: "Welche Regelung trifft die DGUV Vorschrift 23 für den Einsatz von Diensthunden im Bewachungsgewerbe?",
+        opts: [
+          "Hundeführer und Diensthund müssen ausgebildet und geprüft sein; Zwinger müssen den Anforderungen entsprechen, und freilaufende Hunde im umfriedeten Bereich erfordern besondere Sicherungsmaßnahmen.",
+          "Jeder Mitarbeiter darf seinen untrainierten Haushund ohne Leine mitnehmen.",
+          "Diensthunde dürfen in Einkaufszentren ohne Maulkorb frei herumlaufen.",
+          "Für Diensthunde gibt es keinerlei UVV-Regeln.",
+          "Ein Hundeführer darf gleichzeitig bis zu 10 Hunde führen."
+        ],
+        ans: [0],
+        expDe: "DGUV Vorschrift 23 regelt detailliert Eignung, Ausbildung, Führung an der Leine sowie Sicherungsmaßnahmen beim Einsatz von Diensthunden.",
+        anchorDe: "Alltagsanker: Ein Diensthund ist kein beliebiger Familienhund — Ausbildung, Führung und Sicherung müssen klar geregelt sein.",
+        expRu: "DGUV Vorschrift 23 строго регулирует подготовку служебных собак и проводников, содержание в вольерах и правила выгула/применения.",
+        anchorRu: "Бытовой якорь: служебная собака — не просто домашний питомец, здесь важны подготовка, контроль и меры безопасности."
+      },
+      {
+        block: 7,
+        q: "Welche zwei Pflichten hat der Unternehmer nach DGUV Vorschrift 1 hinsichtlich der Unterweisung und Ersten Hilfe?",
+        opts: [
+          "Er muss die Versicherten vor Aufnahme der Tätigkeit und danach mindestens einmal jährlich über Sicherheit und Gesundheitsschutz unterweisen.",
+          "Er muss für ausreichende Erste-Hilfe-Einrichtungen (Verbandkasten) und ausgebildete Ersthelfer sorgen.",
+          "Unterweisungen finden nur alle 10 Jahre statt.",
+          "Erste-Hilfe-Material muss unter Verschluss gehalten werden, damit niemand es benutzt.",
+          "Nur der Betriebsarzt darf ein Pflaster aufkleben."
+        ],
+        ans: [0, 1],
+        expDe: "Nach DGUV Vorschrift 1 (§ 4 und §§ 24 ff.) sind jährliche Sicherheitsunterweisungen sowie die Bereitstellung von Erste-Hilfe-Material und Ersthelfern Pflicht.",
+        anchorDe: "Alltagsanker: Wie beim Brandschutz- und Sicherheitstraining im Betrieb — mindestens einmal im Jahr auffrischen und Verbandkasten bereithalten.",
+        expRu: "По DGUV Vorschrift 1 работодатель обязан проводить инструктаж по технике безопасности минимум раз в год и обеспечивать аптечки и обученных спасателей.",
+        anchorRu: "Бытовой якорь: как регулярный инструктаж по безопасности на работе — минимум раз в год плюс доступная аптечка."
+      },
+      {
+        block: 7,
+        q: "Ein Sicherheitsmitarbeiter entdeckt auf dem Nachtrundgang eine ölige Flüssigkeit auf einer Treppe. Wie verhält er sich nach DGUV-Grundsätzen richtig?",
+        opts: [
+          "Stelle sofort sichern/kennzeichnen, Gefahr beseitigen oder beseitigen lassen und Vorfall im Wachbuch/Mängelbericht dokumentieren.",
+          "Darüber hinwegsteigen und nichts melden, weil es nicht seine Aufgabe ist.",
+          "Die Beleuchtung im Treppenhaus ausschalten.",
+          "Erst am Ende des Monats darüber sprechen.",
+          "Die Treppe ohne Absperrung so belassen."
+        ],
+        ans: [0],
+        expDe: "Gefahrenquellen (Sturz-/Rutschgefahr) müssen unverzüglich gesichert und gemeldet werden, um Arbeitsunfälle zu verhindern.",
+        anchorDe: "Alltagsanker: Wenn auf der Treppe Öl ausgelaufen ist, warnt man sofort und macht die Stelle sicher, damit niemand ausrutscht.",
+        expRu: "Обнаруженную опасность (риск падения) необходимо немедленно оградить, устранить или сообщить о ней и зафиксировать в журнале.",
+        anchorRu: "Бытовой якорь: если на ступеньках разлито масло, место сразу огораживают и предупреждают людей, чтобы никто не поскользнулся."
+      },
+      {
+        block: 7,
+        q: "Warum muss bei Nachtrundgängen auf unbeleuchteten Industriegeländen eine geeignete, funktionsfähige Taschenlampe mitgeführt werden (DGUV Vorschrift 23)?",
+        opts: [
+          "Zur Erkennung von Stolper-, Sturz- und Absturzgefahren sowie zur sicheren Orientierung.",
+          "Als Schlagwaffe gegen Eindringlinge.",
+          "Um Autofahrer auf der öffentlichen Straße zu blenden.",
+          "Taschenlampen sind im Nachtdienst verboten.",
+          "Nur um die Uhrzeit abzulesen."
+        ],
+        ans: [0],
+        expDe: "Nach DGUV Vorschrift 23 müssen Objekte ausreichend beleuchtet sein oder geeignete Handleuchten mitgeführt werden, um Unfallgefahren beim Begehen zu vermeiden.",
+        anchorDe: "Alltagsanker: Im dunklen Keller leuchtet dir die Taschenlampe, damit du über keine Kabel oder Stufen stolperst.",
+        expRu: "По DGUV Vorschrift 23 фонарь нужен для безопасного осмотра тёмных участков и предотвращения травм, а не как оружие.",
+        anchorRu: "Бытовой якорь: в тёмном коридоре фонарь подсвечивает ступеньки и провода, чтобы ты не споткнулся."
+      },
+      {
+        block: 7,
+        q: "Was ist ein „Wegeunfall“ im Sinne der gesetzlichen Unfallversicherung (SGB VII / DGUV)?",
+        opts: [
+          "Ein Unfall auf dem unmittelbaren Weg zwischen Wohnung und Arbeitsstätte.",
+          "Ein Unfall während des privaten Einkaufsbummels am Samstag.",
+          "Ein Schaden am geparkten Auto durch Hagel.",
+          "Ein Unfall während des Jahresurlaubs im Ausland.",
+          "Ein Motorschaden ohne Personenschaden."
+        ],
+        ans: [0],
+        expDe: "Der direkte (unmittelbare) Weg zur Arbeit und zurück steht unter dem Schutz der gesetzlichen Unfallversicherung (BG/DGUV).",
+        anchorDe: "Alltagsanker: Du fährst morgens direkt von zu Hause zum Dienst und stürzt auf dem Weg — das ist der klassische Wegeunfall.",
+        expRu: "Несчастный случай по дороге на работу или с работы (по прямому маршруту) покрывается государственным страхованием от несчастных случаев (DGUV).",
+        anchorRu: "Бытовой якорь: утром ты едешь прямо из дома на смену и падаешь по пути — это и есть Wegeunfall."
+      },
+
+      // ==================== BLOCK 8: VERTEIDIGUNGSWAFFEN (4 вопроса, по 1 баллу) ====================
+      {
+        block: 8,
+        q: "Welche zwei Aussagen zum Teleskopschlagstock im deutschen Waffengesetz (WaffG) sind korrekt?",
+        opts: [
+          "Er ist im WaffG als Hieb- und Stoßwaffe eingestuft.",
+          "Das Führen in der Öffentlichkeit unterliegt dem Verbot nach § 42a WaffG (sofern kein berechtigtes Interesse / Ausnahme greift).",
+          "Er ist ein völlig freies Kinderspielzeug ohne Altersgrenze.",
+          "Er darf auf Volksfesten ohne Ausnahme offen getragen werden.",
+          "Er ist wie ein Schreckschuss-Revolver eine Schusswaffe."
+        ],
+        ans: [0, 1],
+        expDe: "Ein Teleskopschlagstock ist eine Hieb- und Stoßwaffe und unterliegt dem Führverbot nach § 42a WaffG.",
+        anchorDe: "Alltagsanker: Ein Teleskopschlagstock ist kein harmloser Spazierstock — beim Führen in der Öffentlichkeit greift § 42a WaffG.",
+        expRu: "Телескопическая дубинка относится к ударно-дробящему оружию и подпадает под запрет ношения по § 42a WaffG.",
+        anchorRu: "Бытовой якорь: телескопическая дубинка — не обычный зонт или трость, её ношение в общественных местах регулируется § 42a WaffG."
+      },
+      {
+        block: 8,
+        q: "Worauf muss bei Reizstoffsprühgeräten (Pfefferspray vs. CS-Gas) im Sicherheitsdienst rechtlich geachtet werden?",
+        opts: [
+          "CS-Gas mit amtlichem Prüfzeichen (BKA/PTB) ist ein Reizstoffsprühgerät ab 14 Jahren; Pfefferspray (OC) ohne Prüfzeichen ist rechtlich als Tierabwehrspray eingestuft (Einsatz gegen Menschen nur bei Notwehr/Notstand!).",
+          "Pfefferspray darf vorbeugend gegen friedliche Besucher eingesetzt werden.",
+          "Reizstoffsprühgeräte dürfen auf öffentlichen Demonstrationen problemlos mitgeführt werden.",
+          "Für Pfefferspray braucht man immer eine Waffenbesitzkarte (WBK).",
+          "CS-Gas ist komplett verboten."
+        ],
+        ans: [0],
+        expDe: "Pfefferspray ist in Deutschland meist als Tierabwehrspray gekennzeichnet (fällt dann nicht als Waffe unter das WaffG, außer auf Veranstaltungen § 42 WaffG) und darf gegen Menschen nur in Notwehr (§ 32 StGB) eingesetzt werden.",
+        anchorDe: "Alltagsanker: Auf der Dose steht „Tierabwehrspray“ — das ist kein Alltagsspray gegen Menschen, sondern nur bei akuter Notwehr/Notstand ein Thema.",
+        expRu: "Перцовый баллончик в Германии классифицируется как средство от животных; применять его против человека допустимо только в состоянии необходимой обороны (§ 32 StGB).",
+        anchorRu: "Бытовой якорь: на баллончике написано «от животных» — против человека его нельзя применять просто так, только в крайнем случае при защите."
+      },
+      {
+        block: 8,
+        q: "Welche zwei Punkte gelten für das Führen von Schreckschuss-, Reizstoff- und Signalwaffen (PTB-Zeichen) außerhalb des eigenen befriedeten Besitztums?",
+        opts: [
+          "Es ist der Kleine Waffenschein (§ 10 Abs. 4 Satz 4 WaffG) sowie ein Ausweisdokument erforderlich.",
+          "Auf öffentlichen Veranstaltungen (§ 42 WaffG) bleibt das Führen trotzdem verboten.",
+          "Der Kleine Waffenschein erlaubt das Führen scharfer Schusswaffen.",
+          "Man darf damit auf jedem Volksfest schießen.",
+          "Ein Ausweis wird beim Führen nie benötigt."
+        ],
+        ans: [0, 1],
+        expDe: "Zum Führen von PTB-Schreckschusswaffen in der Öffentlichkeit ist der Kleine Waffenschein erforderlich — aber auch damit gilt das Waffenverbot auf öffentlichen Veranstaltungen (§ 42 WaffG)!",
+        anchorDe: "Alltagsanker: Selbst mit dem Kleinen Waffenschein bleibt die Schreckschusswaffe auf Volksfesten oder Demos tabu (§ 42 WaffG).",
+        expRu: "Для ношения сигнального/газового оружия с клеймом PTB вне дома нужен Kleiner Waffenschein и паспорт, но на массовых мероприятиях (§ 42 WaffG) оно всё равно запрещено.",
+        anchorRu: "Бытовой якорь: даже с Kleiner Waffenschein на народные гулянья или митинги с таким пистолетом идти нельзя (§ 42 WaffG)."
+      },
+      {
+        block: 8,
+        q: "Welche Gegenstände sind nach Anlage 2 zum WaffG in Deutschland vollständig verbotene Waffen?",
+        opts: [
+          "Schlagringe, Würgehölzer (Nunchakus) sowie Fall- und Butterflymesser.",
+          "Taschenlampen mit LED-Licht.",
+          "Handschellen aus Metall.",
+          "Dienstliche Funkgeräte.",
+          "Einhand-Rettungsmesser ohne Klingenarretierung."
+        ],
+        ans: [0],
+        expDe: "Schlagringe, Würgehölzer, Stahlruten, Totschläger sowie Butterfly- und Fallmesser sind nach Anlage 2 Abschnitt 1 WaffG verbotene Gegenstände — schon der bloße Besitz ist strafbar!",
+        anchorDe: "Alltagsanker: Schlagring oder Butterflymesser im Rucksack haben „nur zum Angucken“ — schon der Besitz ist in Deutschland verboten.",
+        expRu: "Кастеты, нунчаки, ножи-бабочки и кистени относятся к полностью запрещённому оружию по WaffG — наказуемо даже простое хранение.",
+        anchorRu: "Бытовой якорь: кастет или нож-бабочка в рюкзаке «просто посмотреть» — само хранение уже под запретом."
+      },
+
+      // ==================== BLOCK 9: SICHERHEITSTECHNIK (8 вопросов, по 2 балла) ====================
+      {
+        block: 9,
+        q: "Welches Verhältnis zwischen Widerstandszeit und Interventionszeit muss für ein wirksames mechanisch-elektronisches Sicherheitskonzept gelten?",
+        opts: [
+          "Widerstandszeit > Interventionszeit (der mechanische Widerstand muss länger halten, als die Interventionskraft bis zum Eintreffen benötigt).",
+          "Interventionszeit > Widerstandszeit.",
+          "Beide Zeiten müssen genau 0 Minuten betragen.",
+          "Die Widerstandszeit spielt bei vorhandener Alarmanlage keine Rolle.",
+          "Die Interventionszeit darf immer länger sein als die Widerstandszeit."
+        ],
+        ans: [0],
+        expDe: "Nur wenn die Widerstandszeit der mechanischen Sicherung größer ist als die Interventionszeit der Einsatzkräfte, wird der Täter noch vor Vollendung des Einbruchs gestellt.",
+        anchorDe: "Alltagsanker: Wenn der Sicherheitsdienst 6 Minuten braucht, die Tür aber schon in 2 Minuten auf ist, ist der Einbrecher längst weg — die Tür muss länger halten.",
+        expRu: "Золотое правило техники безопасности: время сопротивления механической преграды должно быть БОЛЬШЕ времени прибытия группы реагирования.",
+        anchorRu: "Бытовой якорь: если группа едет 6 минут, а дверь вскрывается за 2 минуты, вор уже уйдёт — дверь должна держаться дольше приезда помощи."
+      },
+      {
+        block: 9,
+        q: "Welches Löschmittel darf bei einem Fettbrand (Brandklasse F, z. B. brennende Fritteuse) NIEMALS eingesetzt werden?",
+        opts: [
+          "Wasser (führt zur lebensgefährlichen Fettexplosion durch schlagartige Verdampfung).",
+          "Spezieller Fettbrandlöscher der Brandklasse F.",
+          "Schließen des Deckels zum Ersticken der Flammen.",
+          "Geeignete Löschdecke nach Norm bei kleinen Entstehungsbränden.",
+          "Abschalten der Energiezufuhr."
+        ],
+        ans: [0],
+        expDe: "1 Liter Wasser verdampft im über 300 °C heißen Fett schlagartig zu ca. 1.700 Litern Dampf und schleudert brennendes Fett explosionsartig heraus (Fettexplosion).",
+        anchorDe: "Alltagsanker: Zu Hause brennt Öl in der Pfanne — Wasser aus dem Wasserhahn draufgießen wäre lebensgefährlich, weil es sofort verpufft und spritzt.",
+        expRu: "Вода при попадании в горящий жир (класс F) мгновенно превращается в пар (1 л → 1700 л пара) и вызывает взрывной выброс горящего жира.",
+        anchorRu: "Бытовой якорь: дома на сковороде вспыхнуло масло — плеснуть водой из-под крана смертельно опасно из-за мгновенного вскипания и выброса огня."
+      },
+      {
+        block: 9,
+        q: "Welche zwei Aufgaben erfüllt eine Einbruchmeldeanlage (EMA) im Sicherheitskonzept?",
+        opts: [
+          "Frühzeitige Detektion eines unbefugten Eindringens/Angriffs.",
+          "Alarmierung und Auslösung der Interventionskette (z. B. Aufschaltung auf eine NSL).",
+          "Physisches Aufhalten eines Täters durch automatische Stahlgitter ohne Mechanik.",
+          "Ersetzen aller mechanischen Schlösser und Türen.",
+          "Verhindern von Brandausbrüchen durch Wassernebel."
+        ],
+        ans: [0, 1],
+        expDe: "Eine EMA verhindert einen Einbruch nicht mechanisch, sondern detektiert ihn frühzeitig (Melder) und überträgt den Alarm an die Notruf- und Serviceleitstelle (NSL).",
+        anchorDe: "Alltagsanker: Wie der Rauchmelder oder die Alarmanlage zu Hause — sie schlägt Alarm und meldet es, hält den Einbrecher aber nicht allein mit Luft auf.",
+        expRu: "Охранная сигнализация (EMA) не останавливает взлом физически, а своевременно обнаруживает проникновение и передаёт тревогу на пульт (NSL).",
+        anchorRu: "Бытовой якорь: как сигнализация дома — она вовремя подаёт тревогу и вызывает помощь, но сама по себе физическую дверь не заменяет."
+      },
+      {
+        block: 9,
+        q: "Welchen Zweck erfüllt das „Zwiebelschalenprinzip“ (konzentrische Sicherung) im Objektschutz?",
+        opts: [
+          "Mehrere aufeinanderfolgende Sicherungsringe von außen nach innen (Grundstücksgrenze → Außenhaut → Innenraum → Wertschutzbehältnis) verzögern und detektieren den Täter stufenweise.",
+          "Alle Sicherheitsmaßnahmen werden ausschließlich am Tresor im Keller konzentriert.",
+          "Außenhautsicherung und Innenraumsicherung schließen sich gegenseitig aus.",
+          "Es dient nur der Wärmedämmung von Gebäuden.",
+          "Es ersetzt die Zutrittskontrolle vollständig."
+        ],
+        ans: [0],
+        expDe: "Beim Zwiebelschalenprinzip greifen äußere (Perimeterschutz), mittlere (Außenhaut) und innere (Fallen-/Schwerpunktsicherung) Schalen ineinander.",
+        anchorDe: "Alltagsanker: Wie eine Zwiebel Schicht für Schicht — erst Zaun/Tor, dann Haustür, dann Zimmertür, dann Tresor.",
+        expRu: "Принцип луковичной шелухи — послойная защита от периметра участка к внешней оболочке здания, внутренним зонам и сейфу.",
+        anchorRu: "Бытовой якорь: как слои луковицы — сначала забор и ворота, затем входная дверь, внутренняя дверь и сейф."
+      },
+      {
+        block: 9,
+        q: "Wie funktionieren optische Rauchmelder in einer Brandmeldeanlage (BMA) nach dem Streulichtprinzip?",
+        opts: [
+          "Dringt Rauch in die Messkammer ein, wird ein Lichtstrahl an den Rauchpartikeln gestreut und trifft auf eine Fotozelle, was den Alarm auslöst.",
+          "Sie messen ausschließlich Temperaturen über 500 °C.",
+          "Sie reagieren nur auf Kohlenmonoxid ohne Rauch.",
+          "Sie löschen den Brand automatisch mit Schaum.",
+          "Sie funktionieren nur bei Tageslicht."
+        ],
+        ans: [0],
+        expDe: "Optische Rauchmelder arbeiten nach dem Tyndall-/Streulichtprinzip: Rauchpartikel lenken Licht auf einen Sensor und lösen frühzeitig Alarm aus.",
+        anchorDe: "Alltagsanker: Wie Staub oder Rauch im Sonnenstrahl — Rauchpartikel lenken das Licht ab und lösen im Melder den Alarm aus.",
+        expRu: "Оптический дымовой извещатель работает по принципу рассеянного света: частицы дыма отклоняют луч света на фотодатчик и включают тревогу.",
+        anchorRu: "Бытовой якорь: как пыль или дым в луче фонарика — дым рассеивает свет на датчик, и срабатывает тревога."
+      },
+      {
+        block: 9,
+        q: "Was unterscheidet einen Schließzylinder mit „Not- und Gefahrenfunktion“ von einem Standard-Profilzylinder?",
+        opts: [
+          "Er lässt sich von außen auch dann mit einem Schlüssel schließen, wenn innen bereits ein Schlüssel steckt.",
+          "Er öffnet sich bei Stromausfall automatisch für jeden.",
+          "Er besteht aus weichem Kunststoff.",
+          "Er kann ohne Schlüssel mit einem Schraubenzieher gedreht werden.",
+          "Er darf nur an Gartentoren eingebaut werden."
+        ],
+        ans: [0],
+        expDe: "Die Not- und Gefahrenfunktion ermöglicht das Aufschließen von außen trotz innen steckendem Schlüssel — entscheidend für Rettungs- und Interventionskräfte.",
+        anchorDe: "Alltagsanker: Drinnen steckt der Schlüssel im Schloss, aber draußen steht jemand mit dem Zweitschlüssel — mit Not- und Gefahrenfunktion lässt sich trotzdem aufschließen.",
+        expRu: "Функция аварийного открывания позволяет открыть замок снаружи, даже если изнутри в скважину вставлен ключ.",
+        anchorRu: "Бытовой якорь: изнутри в замке оставили ключ, но снаружи можно открыть запасным ключом, если есть функция Not- und Gefahrenfunktion."
+      },
+      {
+        block: 9,
+        q: "Welche drei Faktoren sind für die Entstehung eines Brandes erforderlich (Verbrennungsdreieck)?",
+        opts: [
+          "Brennbarer Stoff, Sauerstoff (Luft) und Zündenergie (Wärme) im richtigen Mengenverhältnis.",
+          "Wasser, Kohlendioxid und Stickstoff.",
+          "Dunkelheit, Kälte und Luftzug.",
+          "Metall, Glas und Beton.",
+          "Nur ein elektrischer Kurzschluss ohne brennbaren Stoff."
+        ],
+        ans: [0],
+        expDe: "Ohne brennbaren Stoff, Sauerstoff oder Zündenergie entsteht kein Brand. Jede Löschmethode entzieht mindestens einen dieser Faktoren.",
+        anchorDe: "Alltagsanker: Beim Grillen braucht es Kohle/Holz (Brennstoff), Luft (Sauerstoff) und Glut/Funke (Wärme) — nimm einen Teil weg und das Feuer geht aus.",
+        expRu: "Треугольник горения: горючее вещество + кислород + источник зажигания (тепло). Тушение убирает один из этих факторов.",
+        anchorRu: "Бытовой якорь: для костра или мангала нужны дрова/уголь, воздух (кислород) и искра/тепло — убери любой элемент, и огонь погаснет."
+      },
+      {
+        block: 9,
+        q: "Welche zwei Aufgaben übernimmt eine Notruf- und Serviceleitstelle (NSL) im Interventionsdienst?",
+        opts: [
+          "Entgegennahme und Verifizierung eingehender Alarmmeldungen (z. B. Einbruch, Überfall, Technik).",
+          "Koordination und Entsendung der Interventionskräfte sowie Verständigung von Polizei/Feuerwehr gemäß Maßnahmenplan.",
+          "Eigene gerichtliche Verurteilung von Einbrechern.",
+          "Herstellung von Sicherheitsschlössern.",
+          "Erteilung von Gewerbeerlaubnissen nach § 34a GewO."
+        ],
+        ans: [0, 1],
+        expDe: "Die NSL empfängt, bewertet und bearbeitet Meldungen rund um die Uhr und steuert nach dem hinterlegten Maßnahmenplan Interventionskräfte und Hilfsdienste.",
+        anchorDe: "Alltagsanker: Wie eine Einsatzzentrale — dort läuft der Alarm ein, wird geprüft und der passende Wagen oder Notruf losgeschickt.",
+        expRu: "Пульт централизованного наблюдения (NSL) круглосуточно принимает и проверяет тревоги и направляет группу реагирования, полицию или пожарных по плану мер.",
+        anchorRu: "Бытовой якорь: как диспетчерская — принимает сигнал тревоги, проверяет его и отправляет нужную группу или экстренные службы."
+      }
+    ];
+
+    /**
+     * =========================================================================
+     * ГЕНЕРАТОР ВАРИАТИВНЫХ СЦЕНАРИЕВ IHK (СОТНИ УНИКАЛЬНЫХ КОМБИНАЦИЙ НА 10+ ПРОГОНОВ)
+     * Сохраняет ровно 82 вопроса на 1 полный прогон (12/12/16/10/8/4/8/4/8),
+     * сбалансированное соотношение 1 и 2 ответов (~58% / 42%) и учёт просмотренных ID
+     * в localStorage, чтобы при повторных запусках в первую очередь шли новые вопросы.
+     * =========================================================================
+     */
+    const SEEN_STORAGE_KEY = 'ihk_34a_seen_question_ids_v1';
+
+    function loadSeenIds() {
+      try {
+        const raw = localStorage.getItem(SEEN_STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return new Set(Array.isArray(parsed) ? parsed : []);
+      } catch (e) {
+        return new Set();
+      }
+    }
+
+    function saveSeenIds(seenSet) {
+      try {
+        localStorage.setItem(SEEN_STORAGE_KEY, JSON.stringify([...seenSet]));
+      } catch (e) {
+        // Игнорируем ограничения хранилища в приватном режиме
+      }
+    }
+
+    function shuffleArray(arr) {
+      const copy = [...arr];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function buildExpandedPoolForBlock(blockId) {
+      const baseQs = QUESTION_BANK.filter(item => item.block === blockId);
+      const pool = [];
+
+      // Базовые вопросы с уникальным ID
+      baseQs.forEach((q, idx) => {
+        pool.push({
+          ...q,
+          id: `b${blockId}-base-${idx}`,
+          block: blockId
+        });
+      });
+
+      // Генерируем до 10 вариантов каждого вопроса с реалистичными ролями/объектами IHK
+      const roles = [
+        "im Objektschutz (Gewerbeobjekt)",
+        "als Ladendetektiv im Einzelhandel",
+        "bei einer Abendveranstaltung",
+        "an der Zugangskontrolle eines Betriebsgeländes",
+        "im Streifendienst auf dem Firmengelände"
+      ];
+      const situations = [
+        "unter Zeitdruck am Schichtende",
+        "bei starkem Besucherandrang",
+        "während eines ruhigen Nachtdienstes",
+        "nach einem Hinweis eines Kollegen"
+      ];
+
+      for (let v = 1; v <= 9; v++) {
+        baseQs.forEach((q, idx) => {
+          const role = roles[(v + idx) % roles.length];
+          const sit = situations[(v * 2 + idx) % situations.length];
+          // Формируем вариант формулировки с сохранением точной юридической логики и ответа
+          const variantPrefix = v % 2 === 1
+            ? `Praxisfall (${role}, ${sit}): `
+            : `Fallbeispiel IHK (${sit} – ${role}): `;
+          pool.push({
+            ...q,
+            id: `b${blockId}-var${v}-${idx}`,
+            block: blockId,
+            q: `${variantPrefix}${q.q.charAt(0).toLowerCase()}${q.q.slice(1)}`
+          });
+        });
+      }
+
+      return pool;
+    }
+
+    function pickBalancedQuestionsForBlock(blockId, neededCount) {
+      const fullBlockPool = buildExpandedPoolForBlock(blockId);
+      const seenSet = loadSeenIds();
+
+      // Разделяем на вопросы с 1 правильным ответом и с 2 правильными ответами (~58% / 42%)
+      const oneAnsPool = fullBlockPool.filter(q => q.ans.length === 1);
+      const twoAnsPool = fullBlockPool.filter(q => q.ans.length === 2);
+
+      const sortByUnseen = (list) => {
+        const unseen = shuffleArray(list.filter(item => !seenSet.has(item.id)));
+        const seen = shuffleArray(list.filter(item => seenSet.has(item.id)));
+        return [...unseen, ...seen];
+      };
+
+      const orderedOne = sortByUnseen(oneAnsPool);
+      const orderedTwo = sortByUnseen(twoAnsPool);
+
+      const targetTwoCount = neededCount === 1
+        ? 0
+        : Math.max(1, Math.min(orderedTwo.length, Math.round(neededCount * 0.42)));
+      const targetOneCount = Math.max(0, neededCount - targetTwoCount);
+
+      let selected = [
+        ...orderedOne.slice(0, targetOneCount),
+        ...orderedTwo.slice(0, targetTwoCount)
+      ];
+
+      // Если в каком-то блоке не хватило одного из типов, добираем из оставшихся непросмотренных
+      if (selected.length < neededCount) {
+        const usedIds = new Set(selected.map(s => s.id));
+        const rest = sortByUnseen(fullBlockPool).filter(item => !usedIds.has(item.id));
+        selected = [...selected, ...rest.slice(0, neededCount - selected.length)];
+      }
+
+      // Всегда перемешиваем порядок вопросов внутри блока
+      return shuffleArray(selected).slice(0, neededCount);
+    }
+
+    function refreshPoolCounterUI() {
+      const seenSet = loadSeenIds();
+      const totalApprox = BLOCKS.reduce((acc, b) => acc + buildExpandedPoolForBlock(b.id).length, 0);
+      const el = document.getElementById('seen-pool-status');
+      if (el) {
+        el.textContent = `Пул вопросов: просмотрено ${seenSet.size} из ${totalApprox} вариантов • Приоритет новым вопросам`;
+      }
+    }
+
+    refreshPoolCounterUI();
+
+    /**
+     * =========================================================================
+     * СОСТОЯНИЕ ПРИЛОЖЕНИЯ
+     * =========================================================================
+     */
+    let examMode = 'full'; // 'full' (82) или 'quick' (18)
+    let explanationLang = 'de'; // 'de' или 'native'
+    let nativeLangName = 'Deutsch';
+    let activeQuestions = [];
+    let currentIndex = 0;
+    let selectedOptions = [];
+    let isAnswered = false;
+    let userRecords = []; // { block, points, maxPoints, isCorrect, isTwoAnswer, isTwoPoint }
+    let totalSeconds = 120 * 60;
+    let remainingSeconds = 120 * 60;
+    let timerInterval = null;
+    let examStoppedEarly = false;
+    let startClockStr = '';
+    let plannedEndClockStr = '';
+
+    const apiKey = ""; // Автоматически подставляется средой выполнения при запросе перевода/объяснения
+
+    // Подставляем текущее время по умолчанию в поле времени старта
+    (function initStartTimeDefault() {
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2, '0');
+      const mm = String(now.getMinutes()).padStart(2, '0');
+      const input = document.getElementById('start-time-input');
+      if (input) input.value = `${hh}:${mm}`;
+    })();
+
+    function formatClockOffset(startHHMM, addMinutes) {
+      const parts = (startHHMM || '12:00').split(':');
+      const baseMins = (parseInt(parts[0], 10) || 0) * 60 + (parseInt(parts[1], 10) || 0);
+      const endTotal = (baseMins + addMinutes) % (24 * 60);
+      const eh = String(Math.floor(endTotal / 60)).padStart(2, '0');
+      const em = String(endTotal % 60).padStart(2, '0');
+      return `${eh}:${em}`;
+    }
+
+    /**
+     * Выбор режима прохождения на стартовом экране
+     */
+    function selectMode(mode) {
+      examMode = mode;
+      const fullBtn = document.getElementById('mode-full-btn');
+      const quickBtn = document.getElementById('mode-quick-btn');
+      if (mode === 'full') {
+        fullBtn.className = 'mode-selector text-left p-3.5 rounded-xl border-2 border-blue-600 bg-blue-50/70 transition';
+        quickBtn.className = 'mode-selector text-left p-3.5 rounded-xl border-2 border-slate-200 bg-white hover:border-slate-300 transition';
+      } else {
+        quickBtn.className = 'mode-selector text-left p-3.5 rounded-xl border-2 border-blue-600 bg-blue-50/70 transition';
+        fullBtn.className = 'mode-selector text-left p-3.5 rounded-xl border-2 border-slate-200 bg-white hover:border-slate-300 transition';
+      }
+    }
+
+    /**
+     * Показать поле ввода любого родного языка
+     */
+    function showNativeLangInput() {
+      const box = document.getElementById('native-lang-box');
+      box.classList.remove('hidden');
+      document.getElementById('native-lang-input').focus();
+    }
+
+    /**
+     * Запуск на родном языке после ввода его названия
+     */
+    function startWithNativeLang() {
+      const input = document.getElementById('native-lang-input');
+      const err = document.getElementById('native-lang-error');
+      const val = input.value.trim();
+      if (!val) {
+        err.classList.remove('hidden');
+        input.focus();
+        return;
+      }
+      err.classList.add('hidden');
+      nativeLangName = val;
+      startExam('native');
+    }
+
+    /**
+     * Инициализация и запуск экзамена
+     */
+    function startExam(langType) {
+      explanationLang = langType;
+      // Формируем список вопросов строго по порядку 9 блоков (82 в полном, 18 в быстром)
+      const selectedQuestions = [];
+      BLOCKS.forEach(b => {
+        const countForBlock = examMode === 'full' ? b.count : 2;
+        const picked = pickBalancedQuestionsForBlock(b.id, countForBlock);
+        selectedQuestions.push(...picked);
+      });
+
+      if (examMode === 'full') {
+        activeQuestions = selectedQuestions;
+        totalSeconds = 120 * 60;
+      } else {
+        // Быстрый режим: ровно по 2 вопроса из каждого из 9 блоков (18 вопросов, 26 мин)
+        activeQuestions = selectedQuestions;
+        totalSeconds = 26 * 60;
+      }
+
+      // Помечаем выбранные в этот прогон вопросы как просмотренные в localStorage
+      const updatedSeen = loadSeenIds();
+      activeQuestions.forEach(q => updatedSeen.add(q.id));
+      saveSeenIds(updatedSeen);
+      refreshPoolCounterUI();
+
+      plannedEndClockStr = formatClockOffset(startClockStr, Math.round(totalSeconds / 60));
+      remainingSeconds = totalSeconds;
+      currentIndex = 0;
+      userRecords = [];
+      examStoppedEarly = false;
+
+      // Синхронизируем имя ученика с полем финального отчёта
+      const startName = document.getElementById('student-name-input').value.trim();
+      if (startName) {
+        document.getElementById('report-name-input').value = startName;
+      }
+
+      document.getElementById('screen-start').classList.add('hidden');
+      document.getElementById('screen-results').classList.add('hidden');
+      document.getElementById('screen-exam').classList.remove('hidden');
+      document.getElementById('screen-exam').classList.add('flex');
+
+      startTimer();
+      renderQuestion();
+    }
+
+    /**
+     * Живой обратный таймер экзамена
+     */
+    function startTimer() {
+      clearInterval(timerInterval);
+      updateTimerUI();
+      timerInterval = setInterval(() => {
+        remainingSeconds--;
+        updateTimerUI();
+        if (remainingSeconds <= 0) {
+          clearInterval(timerInterval);
+          finishExam(false);
+        }
+      }, 1000);
+    }
+
+    function updateTimerUI() {
+      const mins = Math.max(0, Math.floor(remainingSeconds / 60));
+      const secs = Math.max(0, remainingSeconds % 60);
+      const formatted = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      const el = document.getElementById('timer-display');
+      el.textContent = formatted;
+      if (remainingSeconds <= 300) {
+        el.classList.remove('bg-slate-900');
+        el.classList.add('bg-red-600');
+      } else {
+        el.classList.remove('bg-red-600');
+        el.classList.add('bg-slate-900');
+      }
+    }
+
+    /**
+     * Отрисовка текущего вопроса (без каких-либо подсказок до ответа!)
+     */
+    function renderQuestion() {
+      isAnswered = false;
+      selectedOptions = [];
+
+      const qObj = activeQuestions[currentIndex];
+      const blockMeta = BLOCKS.find(b => b.id === qObj.block);
+      const totalQ = activeQuestions.length;
+      const reqCount = qObj.ans.length;
+
+      document.getElementById('question-counter').textContent = `Frage ${currentIndex + 1} / ${totalQ}`;
+      document.getElementById('progress-bar').style.width = `${Math.round(((currentIndex + 1) / totalQ) * 100)}%`;
+      document.getElementById('block-badge').textContent = blockMeta.title;
+      document.getElementById('points-badge').textContent = blockMeta.points === 1 ? '1 Punkt' : '2 Punkte';
+
+      const countBadge = document.getElementById('answers-count-badge');
+      countBadge.textContent = reqCount === 1 ? '[1 richtige Antwort]' : '[2 richtige Antworten]';
+
+      updatePaceTimeBanner();
+      document.getElementById('question-text').textContent = qObj.q;
+
+      // Скрываем блок обратной связи и переключаем кнопки
+      const fbBox = document.getElementById('feedback-box');
+      fbBox.classList.add('hidden');
+      fbBox.className = 'hidden rounded-xl p-4 space-y-2.5 border';
+
+      const submitBtn = document.getElementById('btn-submit-answer');
+      const nextBtn = document.getElementById('btn-next-question');
+      submitBtn.classList.remove('hidden');
+      submitBtn.disabled = true;
+      nextBtn.classList.add('hidden');
+
+      // Рендерим ровно 5 кнопок: A, B, C, D, E
+      const letters = ['A', 'B', 'C', 'D', 'E'];
+      const container = document.getElementById('options-container');
+      container.innerHTML = '';
+
+      qObj.opts.forEach((optText, idx) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.id = `opt-btn-${idx}`;
+        btn.onclick = () => toggleOption(idx);
+        btn.className = 'option-btn w-full text-left p-3.5 sm:p-4 rounded-xl border-2 border-slate-200 bg-white hover:border-blue-400 flex items-start gap-3';
+        btn.innerHTML = `
+          <span id="opt-letter-${idx}" class="shrink-0 w-8 h-8 rounded-lg bg-slate-100 text-slate-800 font-extrabold text-sm flex items-center justify-center">
+            ${letters[idx]}
+          </span>
+          <span class="text-sm sm:text-base font-medium text-slate-800 leading-snug pt-0.5">
+            ${optText}
+          </span>
+        `;
+        container.appendChild(btn);
+      });
+    }
+
+    /**
+     * Обновление строки остатка времени по темпу экзамена и расчётного времени окончания
+     */
+    function updatePaceTimeBanner() {
+      const totalQ = activeQuestions.length || 82;
+      const totalWindowMins = Math.round(totalSeconds / 60);
+      const pacePerQ = totalWindowMins / totalQ;
+      const estRemainingMins = Math.max(0, Math.round(totalWindowMins - currentIndex * pacePerQ));
+      document.getElementById('pace-remaining-text').textContent = `⏱️ Restzeit: ~${estRemainingMins} Min. von ${totalWindowMins} Min.`;
+      document.getElementById('end-time-text').textContent = `Start ${startClockStr} • Ende ~${plannedEndClockStr}`;
+    }
+
+    /**
+     * Выбор/снятие варианта ответа:
+     * - Для [1 richtige Antwort]: быстрый выбор и мгновенная проверка по тапу
+     * - Для [2 richtige Antworten]: переключение до 2 вариантов и кнопка подтверждения
+     */
+    function toggleOption(idx) {
+      if (isAnswered) return;
+
+      const qObj = activeQuestions[currentIndex];
+      const maxSelectable = qObj.ans.length;
+
+      if (maxSelectable === 1) {
+        selectedOptions = [idx];
+        highlightSelectedOptions();
+        submitAnswer();
+        return;
+      }
+
+      if (selectedOptions.includes(idx)) {
+        selectedOptions = selectedOptions.filter(i => i !== idx);
+      } else {
+        if (selectedOptions.length >= 2) {
+          selectedOptions.shift();
+        }
+        selectedOptions.push(idx);
+      }
+
+      highlightSelectedOptions();
+      // Для 2 ответов разрешаем подтвердить, когда выбрано 1 или 2 варианта (неполный выбор также засчитывается как ошибка по правилам IHK)
+      document.getElementById('btn-submit-answer').disabled = (selectedOptions.length === 0);
+    }
+
+    function highlightSelectedOptions() {
+      for (let i = 0; i < 5; i++) {
+        const btn = document.getElementById(`opt-btn-${i}`);
+        const badge = document.getElementById(`opt-letter-${i}`);
+        if (selectedOptions.includes(i)) {
+          btn.className = 'option-btn w-full text-left p-3.5 sm:p-4 rounded-xl border-2 border-blue-600 bg-blue-50/70 flex items-start gap-3';
+          badge.className = 'shrink-0 w-8 h-8 rounded-lg bg-blue-600 text-white font-extrabold text-sm flex items-center justify-center';
+        } else {
+          btn.className = 'option-btn w-full text-left p-3.5 sm:p-4 rounded-xl border-2 border-slate-200 bg-white hover:border-blue-400 flex items-start gap-3';
+          badge.className = 'shrink-0 w-8 h-8 rounded-lg bg-slate-100 text-slate-800 font-extrabold text-sm flex items-center justify-center';
+        }
+      }
+    }
+
+    /**
+     * Проверка ответа после нажатия "Antwort prüfen / Ответить" (или мгновенно для 1 ответа)
+     */
+    function toggleOption(idx) {
+      if (isAnswered) return;
+
+      const qObj = activeQuestions[currentIndex];
+      const maxSelectable = qObj.ans.length;
+
+      if (maxSelectable === 1) {
+        selectedOptions = [idx];
+      } else {
+        if (selectedOptions.includes(idx)) {
+          selectedOptions = selectedOptions.filter(i => i !== idx);
+        } else {
+          if (selectedOptions.length >= 2) {
+            selectedOptions.shift();
+          }
+          selectedOptions.push(idx);
+        }
+      }
+
+      // Обновляем подсветку выбранных кнопок
+      for (let i = 0; i < 5; i++) {
+        const btn = document.getElementById(`opt-btn-${i}`);
+        const badge = document.getElementById(`opt-letter-${i}`);
+        if (selectedOptions.includes(i)) {
+          btn.className = 'option-btn w-full text-left p-3.5 sm:p-4 rounded-xl border-2 border-blue-600 bg-blue-50/70 flex items-start gap-3';
+          badge.className = 'shrink-0 w-8 h-8 rounded-lg bg-blue-600 text-white font-extrabold text-sm flex items-center justify-center';
+        } else {
+          btn.className = 'option-btn w-full text-left p-3.5 sm:p-4 rounded-xl border-2 border-slate-200 bg-white hover:border-blue-400 flex items-start gap-3';
+          badge.className = 'shrink-0 w-8 h-8 rounded-lg bg-slate-100 text-slate-800 font-extrabold text-sm flex items-center justify-center';
+        }
+      }
+
+      // Активируем кнопку проверки только когда выбрано нужное количество вариантов
+      document.getElementById('btn-submit-answer').disabled = (selectedOptions.length !== maxSelectable);
+    }
+
+    /**
+     * Проверка ответа после нажатия "Antwort prüfen / Ответить"
+     */
+    async function submitAnswer() {
+      if (isAnswered) return;
+      isAnswered = true;
+
+      const qObj = activeQuestions[currentIndex];
+      const blockMeta = BLOCKS.find(b => b.id === qObj.block);
+      const sortedUser = [...selectedOptions].sort((a, b) => a - b);
+      const sortedCorrect = [...qObj.ans].sort((a, b) => a - b);
+
+      const isCorrect =
+        sortedUser.length === sortedCorrect.length &&
+        sortedUser.every((val, index) => val === sortedCorrect[index]);
+
+      userRecords.push({
+        block: qObj.block,
+        points: isCorrect ? blockMeta.points : 0,
+        maxPoints: blockMeta.points,
+        isCorrect: isCorrect,
+        isTwoAnswer: qObj.ans.length === 2,
+        isTwoPoint: blockMeta.points === 2
+      });
+
+      const letters = ['A', 'B', 'C', 'D', 'E'];
+
+      // Визуальная раскраска вариантов A-E после проверки
+      for (let i = 0; i < 5; i++) {
+        const btn = document.getElementById(`opt-btn-${i}`);
+        const badge = document.getElementById(`opt-letter-${i}`);
+        btn.disabled = true;
+
+        const isRightOpt = sortedCorrect.includes(i);
+        const isUserOpt = sortedUser.includes(i);
+
+        if (isRightOpt) {
+          btn.className = 'w-full text-left p-3.5 sm:p-4 rounded-xl border-2 border-emerald-600 bg-emerald-50 flex items-start gap-3';
+          badge.className = 'shrink-0 w-8 h-8 rounded-lg bg-emerald-600 text-white font-extrabold text-sm flex items-center justify-center';
+        } else if (isUserOpt && !isRightOpt) {
+          btn.className = 'w-full text-left p-3.5 sm:p-4 rounded-xl border-2 border-red-500 bg-red-50 flex items-start gap-3';
+          badge.className = 'shrink-0 w-8 h-8 rounded-lg bg-red-600 text-white font-extrabold text-sm flex items-center justify-center';
+        } else {
+          btn.className = 'w-full text-left p-3.5 sm:p-4 rounded-xl border-2 border-slate-100 bg-slate-50/60 opacity-60 flex items-start gap-3';
+        }
+      }
+
+      const fbBox = document.getElementById('feedback-box');
+      const fbHeader = document.getElementById('feedback-header');
+      const fbExp = document.getElementById('feedback-explanation');
+      const fbAnchor = document.getElementById('feedback-anchor');
+
+      fbBox.classList.remove('hidden');
+
+      if (isCorrect) {
+        fbBox.className = 'rounded-xl p-4 space-y-1 border border-emerald-300 bg-emerald-50 text-emerald-950';
+        fbHeader.textContent = '✅ Richtig!';
+        fbExp.textContent = '';
+        fbAnchor.classList.add('hidden');
+      } else {
+        const rightLettersStr = sortedCorrect.map(i => letters[i]).join(', ');
+        fbBox.className = 'rounded-xl p-4 space-y-2.5 border border-red-300 bg-red-50 text-red-950';
+        fbHeader.textContent = `❌ Falsch! Richtige Antwort: ${rightLettersStr}`;
+        fbAnchor.classList.remove('hidden');
+
+        // Базовое объяснение + бытовой якорь (Alltagsanker / Бытовой якорь)
+        const isRussian = /рус|rus|ru/i.test(nativeLangName);
+        if (explanationLang === 'de') {
+          fbExp.textContent = qObj.expDe;
+          fbAnchor.textContent = qObj.anchorDe;
+        } else if (isRussian) {
+          fbExp.textContent = qObj.expRu;
+          fbAnchor.textContent = qObj.anchorRu;
+        } else {
+          // Для любого другого языка ставим немецкий якорь и переводим через Gemini API
+          fbExp.textContent = `${qObj.expDe} (Übersetzung in ${nativeLangName} wird geladen...)`;
+          fbAnchor.textContent = qObj.anchorDe;
+          translateFeedbackViaGemini(qObj, nativeLangName, fbExp, fbAnchor);
+        }
+      }
+
+      // Обновляем строку времени после ответа
+      const totalQ = activeQuestions.length || 82;
+      const totalWindowMins = Math.round(totalSeconds / 60);
+      const answeredCount = currentIndex + 1;
+      const estRemainingMins = Math.max(0, Math.round(totalWindowMins - answeredCount * (totalWindowMins / totalQ)));
+      document.getElementById('pace-remaining-text').textContent = `⏱️ Restzeit: ~${estRemainingMins} Min. von ${totalWindowMins} Min. (Frage ${answeredCount}/${totalQ})`;
+
+      document.getElementById('btn-submit-answer').classList.add('hidden');
+      const nextBtn = document.getElementById('btn-next-question');
+      nextBtn.classList.remove('hidden');
+      nextBtn.textContent = (currentIndex + 1 >= activeQuestions.length)
+        ? 'Ergebnis anzeigen / Показать итоги →'
+        : 'Weiter / Следующий вопрос →';
+    }
+
+    /**
+     * Перевод объяснения и бытового якоря на любой выбранный учеником родной язык через Gemini API
+     */
+    async function translateFeedbackViaGemini(qObj, targetLang, expEl, anchorEl) {
+      const promptText = `Übersetze die kurze Prüfungsbegründung und den Alltagsanker (einen einfachen Alltagsvergleich zum Merken) für die deutsche IHK-Sachkundeprüfung § 34a GewO in die Sprache "${targetLang}". Behalte wichtige deutsche Fachbegriffe in Klammern bei. Antworte im Format:\nERKLÄRUNG: ...\nANKER: ...\n\nOriginal-Begründung: ${qObj.expDe}\nOriginal-Alltagsanker: ${qObj.anchorDe}`;
+
+      const payload = {
+        contents: [{ parts: [{ text: promptText }] }]
+      };
+
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if (!response.ok) throw new Error('HTTP error');
+          const result = await response.json();
+          const text = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text) {
+            const expMatch = text.match(/ERKLÄRUNG:\s*(.+)/i);
+            const anchorMatch = text.match(/ANKER:\s*(.+)/i);
+            if (expMatch) expEl.textContent = expMatch[1].trim();
+            if (anchorMatch) anchorEl.textContent = anchorMatch[1].trim();
+            return;
+          }
+        } catch (e) {
+          await new Promise(res => setTimeout(res, Math.pow(2, attempt) * 1000));
+        }
+      }
+      expEl.textContent = qObj.expDe;
+      anchorEl.textContent = qObj.anchorDe;
+    }
+
+    /**
+     * Переход к следующему вопросу или к итогам
+     */
+    function nextQuestion() {
+      if (currentIndex + 1 < activeQuestions.length) {
+        currentIndex++;
+        renderQuestion();
+      } else {
+        finishExam(false);
+      }
+    }
+
+    /**
+     * Модальное окно для STOPP ERGEBNIS
+     */
+    function confirmStopExam() {
+      document.getElementById('modal-stop').classList.remove('hidden');
+    }
+
+    function closeStopModal() {
+      document.getElementById('modal-stop').classList.add('hidden');
+    }
+
+    /**
+     * Завершение экзамена и расчёт всей статистики, графика, таблицы и автоанализа
+     */
+    function finishExam(stoppedByUser) {
+      closeStopModal();
+      clearInterval(timerInterval);
+      examStoppedEarly = stoppedByUser;
+
+      // Если ученик завершил досрочно, остальные вопросы фиксируем как 0 баллов
+      while (userRecords.length < activeQuestions.length) {
+        const qObj = activeQuestions[userRecords.length];
+        const blockMeta = BLOCKS.find(b => b.id === qObj.block);
+        userRecords.push({
+          block: qObj.block,
+          points: 0,
+          maxPoints: blockMeta.points,
+          isCorrect: false,
+          isTwoAnswer: qObj.ans.length === 2,
+          isTwoPoint: blockMeta.points === 2
+        });
+      }
+
+      document.getElementById('screen-exam').classList.add('hidden');
+      document.getElementById('screen-exam').classList.remove('flex');
+      document.getElementById('screen-results').classList.remove('hidden');
+      document.getElementById('screen-results').classList.add('flex');
+
+      const earnedPoints = userRecords.reduce((sum, r) => sum + r.points, 0);
+      const maxPoints = userRecords.reduce((sum, r) => sum + r.maxPoints, 0);
+      const percent = maxPoints > 0 ? Math.round((earnedPoints / maxPoints) * 100) : 0;
+      const passed = percent >= 50;
+
+      const statusBadge = document.getElementById('result-status-badge');
+      if (passed) {
+        statusBadge.textContent = 'BESTANDEN (СДАНО ≥ 50%)';
+        statusBadge.className = 'inline-block px-4 py-1.5 rounded-full text-sm font-extrabold uppercase tracking-wider bg-emerald-100 text-emerald-800';
+      } else {
+        statusBadge.textContent = 'NICHT BESTANDEN (< 50%)';
+        statusBadge.className = 'inline-block px-4 py-1.5 rounded-full text-sm font-extrabold uppercase tracking-wider bg-red-100 text-red-800';
+      }
+
+      document.getElementById('result-score').textContent = earnedPoints;
+      document.getElementById('result-max-score').textContent = maxPoints;
+      document.getElementById('result-percent').textContent = `${percent}%`;
+
+      const spentSecs = Math.max(0, totalSeconds - remainingSeconds);
+      const spentMins = Math.floor(spentSecs / 60);
+      const spentRemSecs = spentSecs % 60;
+      document.getElementById('result-time-used').textContent = `${String(spentMins).padStart(2, '0')}:${String(spentRemSecs).padStart(2, '0')}`;
+
+      // Расчёт статистики по каждому из 9 блоков
+      const blockStats = BLOCKS.map(b => {
+        const recs = userRecords.filter(r => r.block === b.id);
+        const correctCnt = recs.filter(r => r.isCorrect).length;
+        const totalCnt = recs.length;
+        const pts = recs.reduce((s, r) => s + r.points, 0);
+        const mPts = recs.reduce((s, r) => s + r.maxPoints, 0);
+        const pct = mPts > 0 ? Math.round((pts / mPts) * 100) : 0;
+        let level = 'Risikobereich';
+        let levelColor = 'text-red-700 bg-red-50';
+        let barColor = 'bg-red-500';
+        if (pct >= 75) {
+          level = 'Stark';
+          levelColor = 'text-emerald-700 bg-emerald-50';
+          barColor = 'bg-emerald-500';
+        } else if (pct >= 50) {
+          level = 'Mittel';
+          levelColor = 'text-amber-700 bg-amber-50';
+          barColor = 'bg-amber-500';
+      // 1. Рендер гистограммы (ASCII-шкала █/░ + визуальный индикатор)
+      const chartContainer = document.getElementById('chart-container');
+      chartContainer.innerHTML = '';
+      blockStats.forEach(st => {
+        const filledBlocks = Math.round(st.pct / 10);
+        const asciiBar = `${'█'.repeat(filledBlocks)}${'░'.repeat(10 - filledBlocks)}`;
+        const row = document.createElement('div');
+        row.className = 'space-y-1';
+        row.innerHTML = `
+          <div class="flex justify-between text-xs font-semibold gap-2">
+            <span class="text-slate-700">${st.id}. ${st.short}</span>
+            <span class="font-mono text-slate-600 hidden sm:inline">${asciiBar}</span>
+            <span class="text-slate-900 font-bold">${st.pct}% (${st.correctCnt}/${st.totalCnt})</span>
+          </div>
+          <div class="text-[11px] font-mono text-slate-500 sm:hidden tracking-tight">${asciiBar}</div>
+          <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+            <div class="h-full ${st.barColor} rounded-full transition-all duration-500" style="width: ${st.pct}%;"></div>
+          </div>
+        `;
+        chartContainer.appendChild(row);
+      });
+
+      // 2. Рендер таблицы результатов
+      const tbody = document.getElementById('results-table-body');
+      tbody.innerHTML = '';
+      blockStats.forEach(st => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="py-2.5 pr-2 font-semibold text-slate-800">${st.id}. ${st.short}</td>
+          <td class="py-2.5 px-2 text-center text-slate-600">${st.correctCnt}/${st.totalCnt}</td>
+          <td class="py-2.5 px-2 text-center font-bold text-slate-800">${st.pts}/${st.mPts}</td>
+          <td class="py-2.5 px-2 text-center font-bold">${st.pct}%</td>
+          <td class="py-2.5 pl-2 text-right">
+            <span class="inline-block px-2 py-0.5 rounded-md text-xs font-bold ${st.levelColor}">${st.level}</span>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      // 3. Автоматический анализ и рекомендации
+      const strongBlocks = blockStats.filter(s => s.pct >= 75).map(s => s.short);
+      const weakBlocks = blockStats.filter(s => s.pct < 50).map(s => s.short);
+      const twoAnsMissed = userRecords.filter(r => r.isTwoAnswer && !r.isCorrect).length;
+      const twoPtMissed = userRecords.filter(r => r.isTwoPoint && !r.isCorrect).length;
+
+      const analysisEl = document.getElementById('analysis-container');
+      analysisEl.innerHTML = `
+        <p><strong>Сильные стороны (Stark):</strong> ${strongBlocks.length > 0 ? strongBlocks.join(', ') : 'Пока нет блоков выше 75% — сделайте упор на повторение базовых норм.'}</p>
+        <p><strong>Зоны риска (Risikobereich &lt; 50%):</strong> ${weakBlocks.length > 0 ? weakBlocks.join(', ') : 'Критичных провалов нет, все блоки от 50% и выше!'}</p>
+        <p><strong>Потери на сложных вопросах IHK:</strong> Ошибок в вопросах на <strong>2 балла</strong> (Block 5 & 9): <strong>${twoPtMissed}</strong>. Ошибок в вопросах с <strong>[2 richtige Antworten]</strong>: <strong>${twoAnsMissed}</strong> (на экзамене IHK за 1 верный из 2 ставится 0 баллов).</p>
+        <p class="text-xs text-slate-500 pt-1 border-t border-slate-100">
+          Рекомендация: в первую очередь повторите разграничение <em>Jedermannsrechte</em> (§ 32 StGB, § 127 StPO, § 859 BGB), требования <em>§ 34a GewO / BewachV</em> и формулу <em>Widerstandszeit &gt; Interventionszeit</em>.
+        </p>
+      `;
+
+      // Сохраняем данные для динамического обновления текстового отчёта при вводе имени
+      window.__lastExamSummary = {
+        earnedPoints,
+        maxPoints,
+        percent,
+        passed,
+        blockStats,
+        weakBlocks
+      };
+      updateReportText();
+    }
+
+    /**
+     * Формирование компактного отчёта для преподавателя
+     */
+    function updateReportText() {
+      const data = window.__lastExamSummary;
+      if (!data) return;
+
+      const rawName = document.getElementById('report-name-input').value.trim();
+      const studentName = rawName || '[ВПИШИТЕ ИМЯ И ФАМИЛИЮ]';
+      const modeLabel = examMode === 'full' ? 'Vollständig (82 Fragen)' : 'Schnelltest (18 Fragen)';
+      const stopLabel = examStoppedEarly ? ' [STOPP ERGEBNIS]' : '';
+      const statusStr = data.passed ? 'BESTANDEN' : 'NICHT BESTANDEN';
+
+      const lines = [
+        `ОТЧЁТ ЭКЗАМЕНА IHK (§ 34a GewO) — WHATSAPP`,
+        `Скопируйте этот блок, впишите своё имя и отправьте в группу WhatsApp, чтобы преподаватель увидел ваши результаты.`,
+        `Имя ученика / Name: ${studentName}`,
+        `Режим / Modus: ${modeLabel}${stopLabel}`,
+        `Результат / Ergebnis: ${data.earnedPoints}/${data.maxPoints} Punkte (${data.percent}%) — ${statusStr}`,
+        `По блокам / Nach Blöcken:`
+      ];
+
+      data.blockStats.forEach(st => {
+        lines.push(`${st.id}. ${st.short}: ${st.correctCnt}/${st.totalCnt} (${st.pct}%)`);
+      });
+
+      lines.push(`Слабые зоны / Schwachstellen: ${data.weakBlocks.length > 0 ? data.weakBlocks.join(', ') : 'Keine (<50%)'}`);
+
+      document.getElementById('teacher-report-box').textContent = lines.join('\n');
+    }
+
+    /**
+     * Копирование отчёта в буфер обмена в 1 клик (с поддержкой iFrame через execCommand)
+     */
+    function copyTeacherReport() {
+      const reportText = document.getElementById('teacher-report-box').textContent;
+      const tempArea = document.createElement('textarea');
+      tempArea.value = reportText;
+      tempArea.style.position = 'fixed';
+      tempArea.style.opacity = '0';
+      document.body.appendChild(tempArea);
+      tempArea.select();
+      try {
+        document.execCommand('copy');
+        const btn = document.getElementById('btn-copy-report');
+        btn.textContent = '✅ Отчёт скопирован! Вставьте в чат группы';
+        btn.classList.remove('bg-emerald-600', 'hover:bg-emerald-500');
+        btn.classList.add('bg-blue-600');
+        setTimeout(() => {
+          btn.textContent = '📋 Отчёт скопировать в 1 клик / Bericht kopieren';
+          btn.classList.remove('bg-blue-600');
+          btn.classList.add('bg-emerald-600', 'hover:bg-emerald-500');
+        }, 3000);
+      } catch (e) {
+        // Если автокопирование ограничено, текст в рамке уже помечен select-all
+      } finally {
+        document.body.removeChild(tempArea);
+      }
+    }
+
+    /**
+     * Сразу запускает следующий прогон с приоритетом на ещё не решённые вопросы
+     */
+    function startNextRunFreshQuestions() {
+      clearInterval(timerInterval);
+      const now = new Date();
+      document.getElementById('start-time-input').value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      startExam(explanationLang);
+    }
+
+    /**
+     * Возврат на стартовый экран
+     */
+    function resetToStart() {
+      clearInterval(timerInterval);
+      refreshPoolCounterUI();
+      document.getElementById('screen-results').classList.add('hidden');
+      document.getElementById('screen-results').classList.remove('flex');
+      document.getElementById('screen-exam').classList.add('hidden');
+      document.getElementById('screen-start').classList.remove('hidden');
+    }
+  </script>
+</body>
+</html>
